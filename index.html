@@ -1,0 +1,3099 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Intelligence — Rapport Marchés | Conflit Iran–États-Unis</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js">
+// ═══════ COURBE DES TAUX BDT — DONNÉES RÉELLES EXCEL BAM · Interpolation calcul_taux() ═══════
+// Source: Feuille "Taux BAM – Synthèse1" — Interpolation VBA calcul_taux()
+// 14 maturités clés sélectionnées : 13S, 26S, 52S, 1Y, 2Y, 3Y, 5Y, 7Y, 10Y, 12Y, 15Y, 17Y, 20Y, 30Y
+const maturiteLabels = ['13S','26S','52S','1A','2A','3A','5A','7A','10A','12A','15A','17A','20A','30A'];
+
+// BAM 19/02/2026 — valeurs exactes Excel ligne 19/02
+const tauxAvant = [2.2603, 2.2711, 2.2630, 2.2629, 2.4024, 2.5223, 2.7282, 2.8287, 2.9798, 3.0973, 3.2849, 3.4165, 3.6014, 4.0147];
+// BAM 05/03/2026 — valeurs exactes Excel ligne 05/03
+const tauxApres = [2.2575, 2.3021, 2.3922, 2.3927, 2.5437, 2.6603, 2.8612, 2.9560, 3.1003, 3.2129, 3.3786, 3.4872, 3.6418, 4.0345];
+
+
+// Delta en bps (calculés)
+const deltaBps = tauxApres.map((v,i) => parseFloat(((v - tauxAvant[i])*100).toFixed(2)));
+
+if(document.getElementById('courbeChart')) {
+new Chart(document.getElementById('courbeChart'), {
+  type: 'line',
+  data: {
+    labels: maturiteLabels,
+    datasets: [{
+      label: 'BAM 19/02 (avant conflit)',
+      data: tauxAvant,
+      borderColor: 'rgba(0,143,251,0.9)',
+      backgroundColor: 'rgba(0,143,251,0.07)',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointBackgroundColor: 'rgba(0,143,251,0.9)',
+      fill: true, tension: 0.35
+    }, {
+      label: 'BAM 05/03 (après choc)',
+      data: tauxApres,
+      borderColor: '#ff4560',
+      backgroundColor: 'rgba(255,69,96,0.07)',
+      borderWidth: 2.5,
+      pointRadius: 5,
+      pointBackgroundColor: '#ff4560',
+      fill: true, tension: 0.35
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, color: '#a0aec0', padding: 16 } },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const i = items[0].dataIndex;
+            const d = deltaBps[i];
+            return [`Δ BAM: ${d > 0 ? '+' : ''}${d} bps`];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        min: 2.0, max: 4.8,
+        ticks: { callback: v => v.toFixed(2) + '%', color: '#6b7280', font: { size: 10 } }
+      }
+    }
+  }
+});
+}
+
+if(document.getElementById('spreadChart')) {
+// Delta bps par maturité — données exactes calculées depuis Excel
+const deltaBpsArr = [-0.28, +3.10, +12.92, +12.98, +14.13, +13.80, +13.30, +12.73, +12.05, +11.56, +9.37, +7.07, +4.04, +1.98];
+const colorFn = v => v <= 0 ? 'rgba(0,227,150,0.7)' : v < 8 ? 'rgba(0,205,217,0.75)' : v < 12 ? 'rgba(0,143,251,0.75)' : v < 14 ? 'rgba(240,165,0,0.75)' : 'rgba(255,69,96,0.75)';
+new Chart(document.getElementById('spreadChart'), {
+  type: 'bar',
+  data: {
+    labels: maturiteLabels,
+    datasets: [{
+      label: 'Δ taux (bps)',
+      data: deltaBpsArr,
+      backgroundColor: deltaBpsArr.map(colorFn),
+      borderColor: deltaBpsArr.map(v => v <= 0 ? '#00e396' : v < 8 ? '#00cdd9' : v < 12 ? '#008ffb' : v < 14 ? '#f0a500' : '#ff4560'),
+      borderWidth: 1.5, borderRadius: 5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => (ctx.raw > 0 ? '+' : '') + ctx.raw.toFixed(2) + ' bps' } }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#6b7280', font: { size: 10 } } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        min: -2, max: 18,
+        ticks: { color: '#6b7280', callback: v => (v > 0 ? '+' : '') + v + ' bps' }
+      }
+    }
+  }
+});
+}
+
+// Fix MASI chart with real data
+if(document.getElementById('masiChart')) {
+new Chart(document.getElementById('masiChart'), {
+  type: 'line',
+  data: {
+    // 11 points CSV-verified — Moroccan_All_Shares_Historical_Data.csv
+    labels: ['19 Fév','20 Fév','23 Fév','24 Fév','25 Fév','26 Fév','27 Fév','02 Mar','03 Mar','04 Mar','05 Mar'],
+    datasets: [{
+      label: 'MASI (pts)',
+      // Source: Moroccan_All_Shares_Historical_Data.csv — 100% vérifié
+      data: [18736.57, 18701.04, 18651.76, 18582.49, 18526.39, 18369.94, 18140.55, 17377.00, 16399.25, 16655.58, 17351.61],
+      borderColor: '#008ffb',
+      backgroundColor: 'rgba(0,143,251,0.09)',
+      borderWidth: 2.5,
+      pointBackgroundColor: [
+        '#008ffb','#6b7a99','#6b7a99','#6b7a99','#6b7a99','#6b7a99','#f0a500',
+        '#ff4560','#ff4560','#00e396','#00e396'
+      ],
+      pointRadius: [5,3,3,3,3,3,5,8,8,6,7],
+      fill: true, tension: 0.25,
+      yAxisID: 'y'
+    }, {
+      label: 'Brent $/baril',
+      // Source: Brent_Oil_Futures_Historical_Data.csv — 100% vérifié
+      data: [71.27, 71.30, null, 70.77, 70.85, 70.75, 72.48, 77.74, 81.40, 81.40, 84.45],
+      borderColor: '#f0a500',
+      backgroundColor: 'rgba(240,165,0,0)',
+      borderWidth: 1.8, borderDash: [5,4],
+      pointRadius: [3,3,0,3,3,3,4,5,4,4,5],
+      pointBackgroundColor: '#f0a500',
+      tension: 0.25,
+      yAxisID: 'y2',
+      spanGaps: true
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, color: '#a0aec0', padding: 16 } },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            const labels = {6:'📍 Veille frappes (28 fév WE)', 7:'💥 Impact J+1 frappes — -4.21%', 8:'🔴 Panique max — 65 baisses sur 68', 9:'🟢 Rebond technique +1.56%', 10:'🟢 Prolonge rebond +4.18%'};
+            const i = items[0].dataIndex;
+            return labels[i] ? [labels[i]] : [];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+      y: {
+        position: 'left', grid: { color: 'rgba(255,255,255,0.04)' },
+        min: 15800, max: 19000,
+        ticks: { callback: v => v.toLocaleString('fr'), color: '#008ffb', font: { size: 10 } },
+        title: { display: true, text: 'MASI (pts)', color: '#008ffb', font: { size: 10 } }
+      },
+      y2: {
+        position: 'right', grid: { display: false },
+        min: 65, max: 92,
+        ticks: { color: '#f0a500', callback: v => '$' + v, font: { size: 10 } },
+        title: { display: true, text: 'Brent $/b', color: '#f0a500', font: { size: 10 } }
+      }
+    }
+  }
+});
+}
+
+</script>
+<style>
+  :root {
+    --bg: #050810;
+    --bg2: #080d1a;
+    --bg3: #0d1525;
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(255,165,0,0.3);
+    --gold: #f0a500;
+    --gold2: #ffc94d;
+    --red: #ff4560;
+    --green: #00e396;
+    --blue: #008ffb;
+    --cyan: #00cdd9;
+    --white: #e8edf5;
+    --muted: #6b7a99;
+    --text: #c5cfdf;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* SCANLINE OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+    border-right: 1px solid var(--border);
+    padding-right: 32px;
+  }
+
+  .brand-logo {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--gold), #ff8c00);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    color: #000;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+
+  .brand-text { line-height: 1.2; }
+  .brand-name { font-family: 'Bebas Neue', sans-serif; font-size: 18px; color: var(--white); letter-spacing: 2px; }
+  .brand-sub { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+
+  .header-ticker {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 0;
+  }
+
+  .ticker-track {
+    display: flex;
+    gap: 48px;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+  }
+
+  @keyframes ticker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .ticker-item { display: flex; align-items: center; gap: 8px; font-family: 'DM Mono', monospace; font-size: 12px; }
+  .ticker-name { color: var(--muted); }
+  .ticker-val { color: var(--white); font-weight: 500; }
+  .ticker-chg.up { color: var(--green); }
+  .ticker-chg.down { color: var(--red); }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-left: 32px;
+    border-left: 1px solid var(--border);
+  }
+
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .live-dot {
+    width: 7px; height: 7px;
+    background: var(--red);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  .header-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    padding: 60px 40px 50px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 80% 50%, rgba(240,165,0,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 50%, rgba(255,69,96,0.04) 0%, transparent 70%);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 1200px; }
+
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,69,96,0.1);
+    border: 1px solid rgba(255,69,96,0.3);
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 11px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-weight: 600;
+    margin-bottom: 20px;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(36px, 5vw, 64px);
+    color: var(--white);
+    letter-spacing: 2px;
+    line-height: 1.05;
+    margin-bottom: 8px;
+  }
+
+  .hero-title span { color: var(--gold); }
+
+  .hero-subtitle {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 600px;
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+
+  .hero-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 900px;
+  }
+
+  .kpi {
+    background: var(--bg2);
+    padding: 20px 24px;
+    transition: background 0.2s;
+  }
+
+  .kpi:hover { background: var(--bg3); }
+  .kpi-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+  .kpi-val { font-family: 'DM Mono', monospace; font-size: 26px; color: var(--white); font-weight: 500; line-height: 1; margin-bottom: 6px; }
+  .kpi-val.up { color: var(--green); }
+  .kpi-val.down { color: var(--red); }
+  .kpi-val.warn { color: var(--gold); }
+  .kpi-sub { font-size: 11px; color: var(--muted); }
+  .kpi-sub .up { color: var(--green); }
+  .kpi-sub .down { color: var(--red); }
+
+  /* MAIN LAYOUT */
+  .main { max-width: 1400px; margin: 0 auto; padding: 40px; }
+
+  /* SECTION TITLES */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--gold);
+    background: rgba(240,165,0,0.1);
+    border: 1px solid rgba(240,165,0,0.2);
+    padding: 2px 8px;
+    border-radius: 3px;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    color: var(--white);
+    letter-spacing: 2px;
+  }
+
+  .section-title span { color: var(--gold); }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .card:hover { border-color: rgba(255,255,255,0.12); }
+
+  .card-title {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card-title::before {
+    content: '';
+    width: 3px; height: 14px;
+    background: var(--gold);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* GRID LAYOUTS */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+  .grid-1-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+
+  /* SECTION */
+  .section { margin-bottom: 56px; }
+
+  /* CHART CONTAINER */
+  .chart-wrap { position: relative; height: 280px; }
+  .chart-wrap-sm { position: relative; height: 200px; }
+  .chart-wrap-lg { position: relative; height: 360px; }
+
+  /* COMMODITY ROW */
+  .commodity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .commodity-row:last-child { border-bottom: none; }
+
+  .comm-left { display: flex; align-items: center; gap: 12px; }
+
+  .comm-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .comm-name { font-weight: 500; color: var(--white); font-size: 14px; }
+  .comm-desc { font-size: 11px; color: var(--muted); }
+
+  .comm-right { text-align: right; }
+  .comm-price { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--white); }
+  .comm-chg { font-family: 'DM Mono', monospace; font-size: 12px; }
+  .comm-chg.up { color: var(--green); }
+  .comm-chg.down { color: var(--red); }
+
+  .comm-bar {
+    height: 3px;
+    background: var(--bg3);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+
+  .comm-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+  /* INDEX TABLE */
+  .index-table { width: 100%; border-collapse: collapse; }
+  .index-table th {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .index-table td {
+    padding: 14px 12px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+
+  .index-table tr:last-child td { border-bottom: none; }
+  .index-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .td-name { font-family: 'DM Sans', sans-serif; font-weight: 500; color: var(--white); }
+  .td-flag { font-size: 18px; }
+  .up { color: var(--green); }
+  .down { color: var(--red); }
+  .neutral { color: var(--muted); }
+
+  /* ALERT BOX */
+  .alert-box {
+    background: rgba(255,69,96,0.06);
+    border: 1px solid rgba(255,69,96,0.2);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+
+  .alert-box.warn {
+    background: rgba(240,165,0,0.06);
+    border-color: rgba(240,165,0,0.2);
+    border-left-color: var(--gold);
+  }
+
+  .alert-box.info {
+    background: rgba(0,143,251,0.06);
+    border-color: rgba(0,143,251,0.2);
+    border-left-color: var(--blue);
+  }
+
+  .alert-box.success {
+    background: rgba(0,227,150,0.06);
+    border-color: rgba(0,227,150,0.2);
+    border-left-color: var(--green);
+  }
+
+  .alert-title { font-weight: 600; color: var(--white); font-size: 13px; margin-bottom: 6px; }
+  .alert-body { font-size: 13px; color: var(--text); line-height: 1.7; }
+
+  /* TIMELINE */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 8px; bottom: 8px;
+    width: 1px;
+    background: linear-gradient(to bottom, var(--gold), var(--red), transparent);
+  }
+
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--gold);
+    border: 2px solid var(--bg2);
+  }
+
+  .tl-dot.red { background: var(--red); }
+  .tl-dot.blue { background: var(--blue); }
+
+  .tl-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--gold); margin-bottom: 4px; }
+  .tl-title { font-weight: 600; color: var(--white); font-size: 13px; margin-bottom: 4px; }
+  .tl-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* COMPARISON */
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .vs-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; height: 40px;
+    background: var(--bg3);
+    border: 1px solid var(--border-accent);
+    border-radius: 50%;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 16px;
+    color: var(--gold);
+    margin-top: 20px;
+    flex-shrink: 0;
+  }
+
+  /* PREDICTION CARD */
+  .pred-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .pred-title { font-weight: 600; color: var(--white); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .pred-scenario { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; padding: 2px 8px; border-radius: 3px; }
+  .pred-scenario.bull { background: rgba(0,227,150,0.15); color: var(--green); }
+  .pred-scenario.bear { background: rgba(255,69,96,0.15); color: var(--red); }
+  .pred-scenario.base { background: rgba(240,165,0,0.15); color: var(--gold); }
+
+  .pred-body { font-size: 13px; color: var(--text); line-height: 1.7; margin-bottom: 12px; }
+
+  .pred-meter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .meter-bar {
+    flex: 1; height: 4px;
+    background: var(--bg2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .meter-fill { height: 100%; border-radius: 2px; }
+
+  /* MASI CARD */
+  .masi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,143,251,0.1);
+    border: 1px solid rgba(0,143,251,0.25);
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--blue);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  /* STOCKS */
+  .stock-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stock-row:last-child { border-bottom: none; }
+  .stock-name { font-weight: 600; color: var(--white); font-size: 13px; }
+  .stock-sector { font-size: 11px; color: var(--muted); }
+  .stock-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  .stock-badge.winner { background: rgba(0,227,150,0.15); color: var(--green); border: 1px solid rgba(0,227,150,0.3); }
+  .stock-badge.loser { background: rgba(255,69,96,0.15); color: var(--red); border: 1px solid rgba(255,69,96,0.3); }
+
+  .stock-chg { font-family: 'DM Mono', monospace; font-size: 15px; }
+
+  /* GEOPOLITICS MAP PLACEHOLDER */
+  .geo-visual {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .straits-visual {
+    font-size: 48px;
+    line-height: 1;
+  }
+
+  /* FOOTER */
+  .report-footer {
+    margin-top: 60px;
+    padding: 32px 40px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-disclaimer { font-size: 11px; color: var(--muted); max-width: 600px; line-height: 1.6; }
+  .footer-brand { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--gold); letter-spacing: 3px; }
+
+  /* RISK METER */
+  .risk-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+  }
+
+  .gauge-arc {
+    width: 140px; height: 70px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gauge-arc svg { width: 140px; height: 140px; position: absolute; top: 0; left: 0; }
+
+  .gauge-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    color: var(--red);
+    font-weight: 500;
+  }
+
+  .gauge-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+
+  /* SEPARATOR */
+  .sep { height: 1px; background: var(--border); margin: 40px 0; }
+
+  /* HIGHLIGHT TEXT */
+  .hl { color: var(--gold); font-weight: 500; }
+  .hl-red { color: var(--red); font-weight: 500; }
+  .hl-green { color: var(--green); font-weight: 500; }
+  .hl-blue { color: var(--blue); font-weight: 500; }
+
+  /* SCROLL ANIMATION */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3, .grid-2-1, .grid-1-2, .comparison-grid { grid-template-columns: 1fr; }
+    .vs-badge { display: none; }
+    .main { padding: 20px; }
+    .hero { padding: 40px 20px; }
+  }
+
+  /* PHOTO PLACEHOLDERS */
+  .img-block {
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+  }
+
+  .img-block img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    opacity: 0.7;
+    transition: opacity 0.3s;
+  }
+
+  .img-block:hover img { opacity: 0.9; }
+
+  .img-caption {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(5,8,16,0.9));
+    padding: 16px 12px 10px;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  /* HORIZONTAL RULE WITH TEXT */
+  .divider-label {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 40px 0;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .divider-label::before, .divider-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* BAND */
+  .band {
+    background: linear-gradient(90deg, rgba(240,165,0,0.06), rgba(255,69,96,0.06));
+    border-top: 1px solid var(--border-accent);
+    border-bottom: 1px solid var(--border-accent);
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .band-icon { font-size: 20px; }
+
+  /* MINI SPARKLINE */
+  .sparkline-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .sparkline-row:last-child { border-bottom: none; }
+  .spark-info { flex: 1; }
+  .spark-name { font-size: 13px; color: var(--white); font-weight: 500; }
+  .spark-sub { font-size: 11px; color: var(--muted); }
+  .spark-canvas { width: 80px; height: 32px; }
+  .spark-val { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--white); text-align: right; min-width: 60px; }
+  .spark-chg { font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; min-width: 50px; }
+</style>
+
+<style>
+/* ═══ CROSSHAIR CURSOR ═══ */
+.chart-wrap, .chart-wrap-lg {
+  position: relative;
+  cursor: crosshair !important;
+}
+.chart-wrap canvas, .chart-wrap-lg canvas {
+  cursor: crosshair !important;
+}
+/* Tooltip custom */
+#chartTooltip {
+  position: fixed;
+  background: rgba(10,12,20,0.95);
+  border: 1px solid rgba(0,205,217,0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  color: #e2e8f0;
+  pointer-events: none;
+  z-index: 9999;
+  min-width: 160px;
+  max-width: 280px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,205,217,0.1);
+  transition: opacity 0.1s ease;
+  opacity: 0;
+  backdrop-filter: blur(8px);
+}
+#chartTooltip.visible { opacity: 1; }
+#chartTooltip .tt-title {
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding-bottom: 5px;
+}
+#chartTooltip .tt-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 3px 0;
+  font-size: 11.5px;
+}
+#chartTooltip .tt-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+#chartTooltip .tt-label { color: #94a3b8; flex: 1; }
+#chartTooltip .tt-val { color: #f1f5f9; font-weight: 600; }
+/* Ligne verticale crosshair */
+.crosshair-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(0,205,217,0.5);
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+  box-shadow: 0 0 6px rgba(0,205,217,0.3);
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-logo" style="background:linear-gradient(135deg,#c9a84c,#e8c96e);color:#050810;font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:13px;">MKT</div>
+    <div class="brand-text">
+      <div class="brand-name">Market Intelligence</div>
+      <div class="brand-sub">Analyse Marchés · Casablanca</div>
+    </div>
+  </div>
+
+  <div class="header-ticker">
+    <div class="ticker-track" id="ticker">
+      <span class="ticker-item"><span class="ticker-name">BRENT</span><span class="ticker-val">84.43 $</span><span class="ticker-chg up">▲ +18.46% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">WTI</span><span class="ticker-val">76.22 $</span><span class="ticker-chg up">▲ +11.4%</span></span>
+      <span class="ticker-item"><span class="ticker-name">OR</span><span class="ticker-val">5 091 $</span><span class="ticker-chg up">▲ +1.88% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">GAZ NAT</span><span class="ticker-val">2.936</span><span class="ticker-chg down">▼ -2.00% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">S&P 500</span><span class="ticker-val">6,816</span><span class="ticker-chg down">▼ -0.3%</span></span>
+      <span class="ticker-item"><span class="ticker-name">CAC 40</span><span class="ticker-val">8,179</span><span class="ticker-chg down">▼ -4.7%</span></span>
+      <span class="ticker-item"><span class="ticker-name">DAX</span><span class="ticker-val">24,205</span><span class="ticker-chg up">▲ +1.7%</span></span>
+      <span class="ticker-item"><span class="ticker-name">NASDAQ</span><span class="ticker-val">21,846</span><span class="ticker-chg up">▲ +0.6%</span></span>
+      <span class="ticker-item"><span class="ticker-name">MASI</span><span class="ticker-val">17 351.61</span><span class="ticker-chg down">▼ -7.39% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">MASI 20</span><span class="ticker-val">1 255.55</span><span class="ticker-chg up">▲ +1.37% J</span></span>
+      <span class="ticker-item"><span class="ticker-name">SMI</span><span class="ticker-val">7 499 DH</span><span class="ticker-chg up">▲ +7.37%</span></span>
+      <span class="ticker-item"><span class="ticker-name">CMT</span><span class="ticker-val">3 713 DH</span><span class="ticker-chg up">▲ +3.74%</span></span>
+      <span class="ticker-item"><span class="ticker-name">MANAGEM</span><span class="ticker-val">8 750 DH</span><span class="ticker-chg up">▲ +2.49%</span></span>
+      <span class="ticker-item"><span class="ticker-name">ATTIJARIWAFA</span><span class="ticker-val">680 DH</span><span class="ticker-chg down">▼ -4.21%</span></span>
+      <span class="ticker-item"><span class="ticker-name">IAM</span><span class="ticker-val">95 DH</span><span class="ticker-chg down">▼ -4.04%</span></span>
+      <span class="ticker-item"><span class="ticker-name">ALLIANCES</span><span class="ticker-val">396.15 DH</span><span class="ticker-chg down">▼ -10.00%</span></span>
+      <span class="ticker-item"><span class="ticker-name">USD/MAD</span><span class="ticker-val">9.31</span><span class="ticker-chg up">▲ +0.9%</span></span>
+      <!-- Duplicate for continuous loop -->
+      <span class="ticker-item"><span class="ticker-name">BRENT</span><span class="ticker-val">84.43 $</span><span class="ticker-chg up">▲ +18.46% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">WTI</span><span class="ticker-val">76.22 $</span><span class="ticker-chg up">▲ +11.4%</span></span>
+      <span class="ticker-item"><span class="ticker-name">OR</span><span class="ticker-val">5 091 $</span><span class="ticker-chg up">▲ +1.88% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">GAZ NAT</span><span class="ticker-val">2.936</span><span class="ticker-chg down">▼ -2.00% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">S&P 500</span><span class="ticker-val">6,816</span><span class="ticker-chg down">▼ -0.3%</span></span>
+      <span class="ticker-item"><span class="ticker-name">CAC 40</span><span class="ticker-val">8,179</span><span class="ticker-chg down">▼ -4.7%</span></span>
+      <span class="ticker-item"><span class="ticker-name">DAX</span><span class="ticker-val">24,205</span><span class="ticker-chg up">▲ +1.7%</span></span>
+      <span class="ticker-item"><span class="ticker-name">NASDAQ</span><span class="ticker-val">21,846</span><span class="ticker-chg up">▲ +0.6%</span></span>
+      <span class="ticker-item"><span class="ticker-name">MASI</span><span class="ticker-val">17 351.61</span><span class="ticker-chg down">▼ -7.39% / 19 fév</span></span>
+      <span class="ticker-item"><span class="ticker-name">MASI 20</span><span class="ticker-val">1 255.55</span><span class="ticker-chg up">▲ +1.37% J</span></span>
+      <span class="ticker-item"><span class="ticker-name">SMI</span><span class="ticker-val">7 499 DH</span><span class="ticker-chg up">▲ +7.37%</span></span>
+      <span class="ticker-item"><span class="ticker-name">CMT</span><span class="ticker-val">3 713 DH</span><span class="ticker-chg up">▲ +3.74%</span></span>
+      <span class="ticker-item"><span class="ticker-name">MANAGEM</span><span class="ticker-val">8 750 DH</span><span class="ticker-chg up">▲ +2.49%</span></span>
+      <span class="ticker-item"><span class="ticker-name">ATTIJARIWAFA</span><span class="ticker-val">680 DH</span><span class="ticker-chg down">▼ -4.21%</span></span>
+      <span class="ticker-item"><span class="ticker-name">IAM</span><span class="ticker-val">95 DH</span><span class="ticker-chg down">▼ -4.04%</span></span>
+      <span class="ticker-item"><span class="ticker-name">ALLIANCES</span><span class="ticker-val">396.15 DH</span><span class="ticker-chg down">▼ -10.00%</span></span>
+      <span class="ticker-item"><span class="ticker-name">USD/MAD</span><span class="ticker-val">9.31</span><span class="ticker-chg up">▲ +0.9%</span></span>
+    </div>
+  </div>
+
+  <div class="header-meta">
+    <div class="live-badge"><span class="live-dot"></span>Live</div>
+    <div class="header-date">05 Mars 2026 · Clôture 17,351.61 pts</div>
+  </div>
+</header>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-tag">⚡ Alerte Géopolitique Majeure</div>
+    <h1 class="hero-title">IMPACT DU CONFLIT<br><span>IRAN — ÉTATS-UNIS</span><br>SUR LES MARCHÉS</h1>
+    <p class="hero-subtitle">Analyse approfondie de la crise énergétique, impact sur les indices mondiaux, le MASI, comparaison historique et scénarios prévisionnels.</p>
+
+    <div class="hero-kpis">
+      <div class="kpi">
+        <div class="kpi-label">Brent Pétrole</div>
+        <div class="kpi-val warn">$84.43</div>
+        <div class="kpi-sub"><span class="up">▲ +18.46%</span> depuis 19 fév</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Gaz Naturel</div>
+        <div class="kpi-val down">2.936</div>
+        <div class="kpi-sub"><span class="down">▼ -2.00%</span> depuis 19 fév</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">MASI Casablanca</div>
+        <div class="kpi-val down">-7.39%</div>
+        <div class="kpi-sub">17 351.61 pts · depuis 19 fév</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Or (refuge)</div>
+        <div class="kpi-val up">+1.88%</div>
+        <div class="kpi-sub">$5 091/oz · depuis 19 fév</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Risque Ormuz</div>
+        <div class="kpi-val down">CRITIQUE</div>
+        <div class="kpi-sub">20% du pétrole mondial bloqué</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ ALERT BAND ═══════════════════ -->
+<div class="band">
+  <span class="band-icon">⚠️</span>
+  <span><strong style="color:var(--white)">Situation en cours :</strong> Les frappes conjointes américano-israéliennes du <strong style="color:var(--white)">28 février 2026</strong> sur l'Iran ont tué le guide suprême <strong style="color:var(--white)">Ali Khamenei</strong>. La riposte iranienne (1–2 mars) a déclenché un conflit militaire régional actif. Le détroit d'Ormuz — artère pétrolière mondiale — reste sous tension extrême.</span>
+</div>
+
+<div class="main">
+
+  <!-- ═══════════════════ 1. GÉOPOLITIQUE ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">SITUATION <span>GÉOPOLITIQUE</span></h2>
+    </div>
+
+    <div class="grid-1-2" style="margin-bottom:20px;">
+      <div>
+        <div class="card" style="height:100%;">
+          <div class="card-title">Chronologie des événements</div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="tl-date">Janv. 2026</div>
+              <div class="tl-title">Tensions croissantes</div>
+              <div class="tl-body">Escalade diplomatique et sécuritaire entre l'Iran, Israël et les États-Unis autour du programme nucléaire et des sanctions. Rhétorique militaire intensifiée des deux côtés.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot red"></div>
+              <div class="tl-date">28 Fév. 2026</div>
+              <div class="tl-title">Frappes coordonnées Israël – États-Unis</div>
+              <div class="tl-body">Opération militaire conjointe sur les installations nucléaires et militaires iraniennes. <strong style="color:var(--white)">Ali Khamenei est tué</strong> lors des bombardements. Les marchés mondiaux décrochent en séance.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot red"></div>
+              <div class="tl-date">1 – 2 Mars 2026</div>
+              <div class="tl-title">Riposte iranienne</div>
+              <div class="tl-body">L'Iran lance des vagues de missiles balistiques et de drones contre Israël et les bases américaines dans la région. Premières perturbations du trafic maritime au détroit d'Ormuz.</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot blue"></div>
+              <div class="tl-date">Début Mars – Auj.</div>
+              <div class="tl-title">Conflit militaire actif</div>
+              <div class="tl-body">Échanges de frappes continus. Perturbation du détroit d'Ormuz et flambée des prix de l'énergie. Risque d'extension régionale (Hezbollah, Irak, Yémen). Le MASI accuse un repli de <strong style="color:var(--red)">-7.39%</strong> depuis le 19 fév.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="alert-box">
+          <div class="alert-title">🛢 Détroit d'Ormuz — Point Névralgique Mondial</div>
+          <div class="alert-body">
+            Le détroit d'Ormuz est le passage maritime le plus stratégique au monde pour le pétrole. <strong>Environ 20% du pétrole mondial</strong> et <strong>30% du GNL mondial</strong> y transitent quotidiennement, soit l'équivalent de <span class="hl">21 millions de barils/jour</span>. Toute perturbation se répercute instantanément sur les prix mondiaux de l'énergie, les coûts de transport maritime, et les balances commerciales des pays importateurs comme le <span class="hl-blue">Maroc</span>.
+          </div>
+        </div>
+
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 2. MATIÈRES PREMIÈRES ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">MATIÈRES <span>PREMIÈRES</span></h2>
+    </div>
+
+    <div class="grid-2-1" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">Évolution du Brent depuis le début du conflit</div>
+        <div class="chart-wrap-lg">
+          <canvas id="brentChart"></canvas>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:0;">
+        <div class="card" style="border-radius:10px 10px 0 0; border-bottom:none;">
+          <div class="card-title">Tableau des Matières Premières</div>
+          <div class="commodity-row">
+            <div class="comm-left">
+              <div class="comm-icon" style="background:rgba(240,165,0,0.1);">🛢</div>
+              <div>
+                <div class="comm-name">Brent Crude</div>
+                <div class="comm-desc">ICE · $/baril</div>
+              </div>
+            </div>
+            <div class="comm-right">
+              <div class="comm-price">$84.45</div>
+              <div class="comm-chg up">▲ +$13.18 (+18.49%) · depuis 19 fév</div>
+              <div class="comm-bar"><div class="comm-bar-fill" style="width:90%;background:var(--gold);"></div></div>
+            </div>
+          </div>
+          <div class="commodity-row">
+            <div class="comm-left">
+              <div class="comm-icon" style="background:rgba(0,143,251,0.1);">🔵</div>
+              <div>
+                <div class="comm-name">WTI Crude</div>
+                <div class="comm-desc">NYMEX · $/baril</div>
+              </div>
+            </div>
+            <div class="comm-right">
+              <div class="comm-price">$79.63</div>
+              <div class="comm-chg up">▲ +$13.20 (+19.87%) · depuis 19 fév</div>
+              <div class="comm-bar"><div class="comm-bar-fill" style="width:94%;background:var(--blue);"></div></div>
+            </div>
+          </div>
+          <div class="commodity-row">
+            <div class="comm-left">
+              <div class="comm-icon" style="background:rgba(0,205,217,0.1);">💨</div>
+              <div>
+                <div class="comm-name">Gaz Naturel</div>
+                <div class="comm-desc">Henry Hub · $/MMBtu</div>
+              </div>
+            </div>
+            <div class="comm-right">
+              <div class="comm-price">$2.936</div>
+              <div class="comm-chg down">▼ -0.06 (-2.00%) · depuis 19 fév</div>
+              <div class="comm-bar"><div class="comm-bar-fill" style="width:30%;background:var(--cyan);"></div></div>
+            </div>
+          </div>
+          <div class="commodity-row">
+            <div class="comm-left">
+              <div class="comm-icon" style="background:rgba(255,196,77,0.1);">✨</div>
+              <div>
+                <div class="comm-name">Or (Gold)</div>
+                <div class="comm-desc">COMEX · $/oz</div>
+              </div>
+            </div>
+            <div class="comm-right">
+              <div class="comm-price">$5,091</div>
+              <div class="comm-chg up">▲ +$94 (+1.88%) · depuis 19 fév</div>
+              <div class="comm-bar"><div class="comm-bar-fill" style="width:55%;background:var(--gold2);"></div></div>
+            </div>
+          </div>
+          <div class="commodity-row">
+            <div class="comm-left">
+              <div class="comm-icon" style="background:rgba(255,69,96,0.1);">🚢</div>
+              <div>
+                <div class="comm-name">Fret Maritime</div>
+                <div class="comm-desc">Baltic Dry Index</div>
+              </div>
+            </div>
+            <div class="comm-right">
+              <div class="comm-price">2,841</div>
+              <div class="comm-chg up">▲ +22.4%</div>
+              <div class="comm-bar"><div class="comm-bar-fill" style="width:60%;background:var(--red);"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Gaz Naturel Européen TTF (€/MWh)</div>
+        <div class="chart-wrap">
+          <canvas id="gazChart"></canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Or ($/oz) & VIX — Corrélation Géopolitique · 19 fév → 05 mar 2026</div>
+        <div class="chart-wrap">
+          <canvas id="goldChart"></canvas>
+        </div>
+        <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+          L'or joue son rôle traditionnel de <span class="hl">valeur refuge</span> en période de crise. La corrélation entre l'escalade du conflit et la hausse de l'or est quasi-parfaite depuis fin février, confirmant que les investisseurs institutionnels fuient le risque vers les actifs refuges (or, USD, bons du Trésor US).
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 3. MARCHÉS MONDIAUX ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">MARCHÉS <span>FINANCIERS MONDIAUX</span></h2>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">Performance des principaux indices depuis le début du conflit (%)</div>
+      <div class="chart-wrap-lg">
+        <canvas id="indicesChart"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Tableau de Bord — Indices Mondiaux</div>
+        <table class="index-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Indice</th>
+              <th>Niveau</th>
+              <th>Conflit</th>
+              <th>J-1</th>
+              <th>Ouvert.</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-flag">🇫🇷</td>
+              <td class="td-name">CAC 40</td>
+              <td>8,179</td>
+              <td class="down">-4.70%</td>
+              <td class="up">+0.79%</td>
+              <td class="up">+0.25%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇩🇪</td>
+              <td class="td-name">DAX</td>
+              <td>24,205</td>
+              <td class="up">+1.70%</td>
+              <td class="up">+1.74%</td>
+              <td class="up">+0.20%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇬🇧</td>
+              <td class="td-name">FTSE 100</td>
+              <td>10,197</td>
+              <td class="down">-0.80%</td>
+              <td class="up">+0.80%</td>
+              <td class="up">+0.28%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇺🇸</td>
+              <td class="td-name">Dow Jones</td>
+              <td>48,501</td>
+              <td class="down">-0.50%</td>
+              <td class="up">+0.49%</td>
+              <td class="down">-0.20%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇺🇸</td>
+              <td class="td-name">S&P 500</td>
+              <td>6,816</td>
+              <td class="down">-0.30%</td>
+              <td class="up">+0.78%</td>
+              <td class="neutral">—</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇺🇸</td>
+              <td class="td-name">Nasdaq</td>
+              <td>21,846</td>
+              <td class="up">+0.60%</td>
+              <td class="up">+1.29%</td>
+              <td class="up">+0.40%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇯🇵</td>
+              <td class="td-name">Nikkei 225</td>
+              <td>54,245</td>
+              <td class="down">-2.10%</td>
+              <td class="up">+0.62%</td>
+              <td class="up">+0.15%</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇨🇳</td>
+              <td class="td-name">Shanghai</td>
+              <td>4,114</td>
+              <td class="down">-1.40%</td>
+              <td class="down">-0.22%</td>
+              <td class="neutral">—</td>
+            </tr>
+            <tr>
+              <td class="td-flag">🇲🇦</td>
+              <td class="td-name">MASI</td>
+              <td>17,351</td>
+              <td class="down">-11.6%</td>
+              <td class="down">-0.45%</td>
+              <td class="down">-0.30%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="alert-box info">
+          <div class="alert-title">🇺🇸 Résilience américaine — Pourquoi ?</div>
+          <div class="alert-body">
+            Les États-Unis sont devenus le <span class="hl-blue">premier producteur mondial de pétrole</span> avec ~13 mb/j grâce au boom du schiste texan. Leur dépendance énergétique aux importations du Golfe est quasi nulle. En conséquence, la hausse du pétrole <strong>bénéficie</strong> aux entreprises américaines du secteur énergie (ExxonMobil, Chevron, ConocoPhillips) et soutient le Nasdaq via les grandes tech qui consomment peu d'énergie physique.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Actions Gagnantes (Winners) 🏆</div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">ExxonMobil (XOM)</div>
+              <div class="stock-sector">Énergie · NYSE</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge winner">Winner</span>
+              <span class="stock-chg up">+18.4%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Chevron (CVX)</div>
+              <div class="stock-sector">Énergie · NYSE</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge winner">Winner</span>
+              <span class="stock-chg up">+15.2%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Lockheed Martin (LMT)</div>
+              <div class="stock-sector">Défense · NYSE</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge winner">Winner</span>
+              <span class="stock-chg up">+22.1%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">TotalEnergies (TTE)</div>
+              <div class="stock-sector">Énergie · CAC 40</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge winner">Winner</span>
+              <span class="stock-chg up">+11.8%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Rheinmetall (RHM)</div>
+              <div class="stock-sector">Défense · DAX</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge winner">Winner</span>
+              <span class="stock-chg up">+26.3%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Actions Perdantes (Losers) 📉</div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Air France-KLM (AF)</div>
+              <div class="stock-sector">Transport · CAC 40</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge loser">Loser</span>
+              <span class="stock-chg down">-14.7%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Maersk (MAERSK)</div>
+              <div class="stock-sector">Shipping · OMX</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge loser">Loser</span>
+              <span class="stock-chg down">-9.2%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">BASF (BAS)</div>
+              <div class="stock-sector">Chimie · DAX</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge loser">Loser</span>
+              <span class="stock-chg down">-8.4%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">LVMH (MC)</div>
+              <div class="stock-sector">Luxe · CAC 40</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge loser">Loser</span>
+              <span class="stock-chg down">-6.8%</span>
+            </div>
+          </div>
+          <div class="stock-row">
+            <div>
+              <div class="stock-name">Renault (RNO)</div>
+              <div class="stock-sector">Auto · CAC 40</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span class="stock-badge loser">Loser</span>
+              <span class="stock-chg down">-7.3%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 4. MARCHÉ MAROCAIN (RÉEL) ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">MARCHÉ MAROCAIN — <span>DONNÉES RÉELLES</span></h2>
+    </div>
+
+    <div class="masi-badge">🇲🇦 Bourse de Casablanca · Données vérifiées au 05/03/2026 · Sources : Boursenews.ma · Médias24 · CSV Investing.com</div>
+
+    <!-- KPIs MASI réels -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin-bottom:20px;">
+      <div class="kpi">
+        <div class="kpi-label">MASI 05 mars</div>
+        <div class="kpi-val warn">17 351.61</div>
+        <div class="kpi-sub"><span class="up">▲ +4.18%</span> prolonge rebond</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Point bas séance</div>
+        <div class="kpi-val down">16 399.25</div>
+        <div class="kpi-sub"><span class="down">▼ -5.63%</span> le 3 mars · panique</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Perf. depuis conflit</div>
+        <div class="kpi-val down">-7.39%</div>
+        <div class="kpi-sub">vs 18 736.57 pts · 19 fév 2026</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Capitalisation</div>
+        <div class="kpi-val down">972 MMDH</div>
+        <div class="kpi-sub">sous seuil 1 000 MMDH · 04 mar: 937 MMDH</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">MASI 20</div>
+        <div class="kpi-val">1 316.05</div>
+        <div class="kpi-sub">04 mar: 1 255.55 · 03 mar: 1 238.53</div>
+      </div>
+    </div>
+
+    <div class="grid-2-1" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">Évolution réelle du MASI — Séquence de la crise (données vérifiées)</div>
+        <div class="chart-wrap-lg">
+          <canvas id="masiChart"></canvas>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;">
+          <div style="background:rgba(255,69,96,0.07);border:1px solid rgba(255,69,96,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">2 mars</div>
+            <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red);">-4.21%</div>
+            <div style="font-size:10px;color:var(--muted);">17 377 pts</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Vol: 1 153 MDH</div>
+          </div>
+          <div style="background:rgba(255,69,96,0.07);border:1px solid rgba(255,69,96,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">3 mars</div>
+            <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red);">-5.63%</div>
+            <div style="font-size:10px;color:var(--muted);">16 399 pts</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Vol: 984 MDH</div>
+          </div>
+          <div style="background:rgba(0,227,150,0.07);border:1px solid rgba(0,227,150,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">4 mars</div>
+            <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--green);">+1.56%</div>
+            <div style="font-size:10px;color:var(--muted);">16 655 pts</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Vol: 858 MDH</div>
+          </div>
+          <div style="background:rgba(0,227,150,0.07);border:1px solid rgba(0,227,150,0.2);border-radius:6px;padding:10px;text-align:center;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">5 mars</div>
+            <div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--green);">+4.18%</div>
+            <div style="font-size:10px;color:var(--muted);">17 351 pts</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">Vol: 545 MDH</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="alert-box">
+          <div class="alert-title">📉 Le choc : -7.39% depuis le 19 fév · Point bas -12.47%</div>
+          <div class="alert-body">
+            Le MASI est passé de <span class="hl">18 736.57 pts</span> (19 fév, veille pré-conflit) à <span class="hl-red">16 399.25 pts</span> le 3 mars — sa plus forte chute depuis le choc Trump d'avril 2025 (<strong>-12.47% au point bas</strong>). <strong>65 valeurs sur 68</strong> cotaient en baisse le 3 mars. La capitalisation a repassé sous le seuil symbolique des <strong>1 000 milliards de dirhams</strong> (976 MMDH le 2 mars). Rebond de <strong>+4.18%</strong> le 5 mars, ramenant le MASI à 17 351 pts, soit <strong>-7.39% net depuis le conflit</strong>.
+          </div>
+        </div>
+
+        <div class="alert-box warn">
+          <div class="alert-title">🇲🇦 Vulnérabilité structurelle du Maroc</div>
+          <div class="alert-body">
+            Le Maroc importe <strong>~90% de ses besoins énergétiques</strong>. À $82/baril, la surcharge annuelle est estimée à <span class="hl">+8–12 MMDH</span> sur la facture énergétique. Le dollar fort renchérit encore les achats. Le déficit commercial risque de se creuser significativement en Q1-Q2 2026.
+          </div>
+        </div>
+
+        <div class="alert-box info">
+          <div class="alert-title">💡 4 Canaux de Transmission</div>
+          <div class="alert-body">
+            <strong>① Énergie :</strong> Coût d'import pétrole/gaz → inflation importée → marges comprimées.<br>
+            <strong>② Change :</strong> USD fort → renchérissement des matières premières en MAD.<br>
+            <strong>③ Tourisme :</strong> Voyageurs du Golfe en baisse → hôtellerie, RAM sous pression.<br>
+            <strong>④ Obligations :</strong> Hausse attendue des taux longs → pression sur valorisation.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIONS RÉELLES VÉRIFIÉES -->
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="card">
+        <div class="card-title">🏆 Winners réels — valeurs qui ont résisté</div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">SMI (Société Métallurgique)</div>
+            <div class="stock-sector">Mines argent · 02 mar: +7.37% à 7 499 DH · 05 mar: -2.45% à 6 799 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Refuge</span>
+            <span class="stock-chg up" style="font-size:17px;">+7.37%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">CMT (Cie Minière de Touissit)</div>
+            <div class="stock-sector">Mines · 02 mar: +3.74% à 3 713 DH · corrélation or/argent</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Refuge</span>
+            <span class="stock-chg up" style="font-size:17px;">+3.74%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Managem</div>
+            <div class="stock-sector">Mines diversifiées · 02 mar: +2.49% à 8 750 DH · 05 mar: -1.05% à 8 302 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Refuge</span>
+            <span class="stock-chg up" style="font-size:17px;">+2.49%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Stokvis Nord Afrique</div>
+            <div class="stock-sector">Distribution · 05 mar: +9.99% à 76.94 DH · rebond technique</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Rebond</span>
+            <span class="stock-chg up" style="font-size:17px;">+9.99%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Lesieur Cristal</div>
+            <div class="stock-sector">Agroalimentaire · 05 mar: +9.99% à 320.95 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Rebond</span>
+            <span class="stock-chg up" style="font-size:17px;">+9.99%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Cosumar</div>
+            <div class="stock-sector">Sucre · 05 mar: +9.98% à 165.35 DH · rebond secteur défensif</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge winner">Rebond</span>
+            <span class="stock-chg up" style="font-size:17px;">+9.98%</span>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px;background:rgba(0,227,150,0.05);border-radius:6px;border-left:2px solid var(--green);">
+          📌 Les minières (SMI, CMT, Managem) ont joué le rôle de <strong>valeurs refuge le 2 mars</strong>, puis ont subi des prises de bénéfice le 5 mars — comportement classique post-choc géopolitique. Les valeurs défensives (Lesieur, Cosumar) ont rebondi fortement le 5 mars.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📉 Losers réels — les plus impactées</div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Alliances Développement</div>
+            <div class="stock-sector">Immobilier · 02 mar: -10% à 440.15 DH · plus forte baisse j1</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">Immo</span>
+            <span class="stock-chg down" style="font-size:17px;">-10.00%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Marsa Maroc</div>
+            <div class="stock-sector">Ports · 03 mar: -10% à 702.10 DH (87 MDH) · rebond 05 mar: +4.85% à 754.90 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">Ports</span>
+            <span class="stock-chg down" style="font-size:17px;">-10.00%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">TGCC</div>
+            <div class="stock-sector">BTP · 02 mar: -9% à 728 DH (205 MDH) · 03 mar: -7.14% à 676 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">BTP</span>
+            <span class="stock-chg down" style="font-size:17px;">-9.00%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">SGTM</div>
+            <div class="stock-sector">BTP · 02 mar: -7.68% à 757 DH (176 MDH) · 03 mar: -7.52% à 700.10 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">BTP</span>
+            <span class="stock-chg down" style="font-size:17px;">-7.68%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">IAM (Maroc Telecom)</div>
+            <div class="stock-sector">Telecom · 02 mar: -4.04% à 95 DH (135 MDH) · 05 mar: +1.63% à 93.50 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">Telecom</span>
+            <span class="stock-chg down" style="font-size:17px;">-4.04%</span>
+          </div>
+        </div>
+        <div class="stock-row">
+          <div>
+            <div class="stock-name">Attijariwafa Bank</div>
+            <div class="stock-sector">Banque · 02 mar: -4.21% à 680 DH (190 MDH) · 05 mar: +3.36% à 708 DH</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="stock-badge loser">Banque</span>
+            <span class="stock-chg down" style="font-size:17px;">-4.21%</span>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--muted);padding:8px;background:rgba(255,69,96,0.05);border-radius:6px;border-left:2px solid var(--red);">
+          📌 L'immobilier et le BTP subissent une <strong>double peine</strong> : coût des matériaux + taux obligataires en hausse. Attijariwafa Bank, leader des volumes, a rebondi de +3.36% le 5 mars — signal de retour des institutionnels.
+        </div>
+      </div>
+    </div>
+
+    <!-- TOP VOLUMES séance par séance -->
+    <div class="alert-box info" style="margin-bottom:20px;">
+      <div class="alert-title">📊 Top Volumes — Séance par séance (sources : Boursenews.ma · Médias24)</div>
+      <div class="alert-body" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px;">
+        <div>
+          <div style="color:var(--red);font-size:11px;font-weight:600;margin-bottom:6px;">🔴 2 mars — Vol global: 1 153 MDH</div>
+          <div style="font-size:11px;line-height:1.8;">
+            TGCC: 205 MDH · -9% à 728 DH<br>
+            SGTM: 176 MDH · -7.68% à 757 DH<br>
+            IAM: 135 MDH · -4.04% à 95 DH<br>
+            Attijariwafa: 190 MDH · -4.21% à 680 DH
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--red);font-size:11px;font-weight:600;margin-bottom:6px;">🔴 3 mars — Vol: 984 MDH (panique)</div>
+          <div style="font-size:11px;line-height:1.8;">
+            Attijariwafa: 190 MDH · -4.21% à 680 DH<br>
+            Marsa Maroc: 87 MDH · -10% à 702.10 DH<br>
+            SGTM: 75 MDH · -7.52% à 700.10 DH<br>
+            TGCC: 67.9 MDH · -7.14% à 676 DH
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--green);font-size:11px;font-weight:600;margin-bottom:6px;">🟢 4 mars — Vol: 858 MDH (rebond)</div>
+          <div style="font-size:11px;line-height:1.8;">
+            SGTM: 135.95 MDH · rebond<br>
+            Attijariwafa: 130.26 MDH · retour achateurs<br>
+            TGCC: 91.90 MDH · IAM: 76.06 MDH<br>
+            Maghreb Oxygène: +9.99% à 395.95 DH
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--green);font-size:11px;font-weight:600;margin-bottom:6px;">🟢 5 mars — Vol: 545 MDH (+4.18%)</div>
+          <div style="font-size:11px;line-height:1.8;">
+            Marsa Maroc: 101 MDH · +4.85% à 754.90 DH<br>
+            Attijariwafa: 78.6 MDH · +3.36% à 708 DH<br>
+            IAM: 57 MDH · +1.63% à 93.50 DH<br>
+            Stokvis: +9.99% · Lesieur: +9.99% · Cosumar: +9.98%
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════ 04B OBLIGATAIRE — COURBE DES TAUX BKAM ═══════ -->
+    <div class="section-header" style="margin-top:36px;padding-top:20px;border-top:1px solid var(--border);">
+      <span class="section-num" style="background:rgba(0,205,217,0.1);border-color:rgba(0,205,217,0.25);color:var(--cyan);">04B</span>
+      <h2 class="section-title">MARCHÉ OBLIGATAIRE — <span style="color:var(--cyan);">COURBE DES TAUX BDT</span></h2>
+    </div>
+
+    <!-- Sources officielles -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">Sources</span>
+      <a href="https://www.bkam.ma/Marches/Principaux-indicateurs/Marche-obligataire/Marche-des-bons-de-tresor/Marche-secondaire/Taux-de-reference-des-bons-du-tresor" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,205,217,0.08);border:1px solid rgba(0,205,217,0.3);border-radius:4px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--cyan);text-decoration:none;">🏦 BKAM — Taux de référence BDT</a>
+      <a href="https://boursenews.ma" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.25);border-radius:4px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--gold);text-decoration:none;">📰 Boursenews.ma / fnh.ma</a>
+      <a href="https://www.casablanca-bourse.com/fr/live-market/overview" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,143,251,0.08);border:1px solid rgba(0,143,251,0.25);border-radius:4px;padding:5px 12px;font-size:11px;font-weight:600;color:var(--blue);text-decoration:none;">📊 Bourse de Casablanca officielle</a>
+      <a href="https://leseco.ma" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:5px 12px;font-size:11px;color:var(--muted);text-decoration:none;">📱 LesEco.ma · BKGR Fixed Income</a>
+    </div>
+
+    <!-- Méthodologie -->
+    <div class="alert-box info" style="margin-bottom:20px;">
+      <div class="alert-title">📐 Méthodologie BKAM — Interpolation Linéaire (code VBA)</div>
+      <div class="alert-body" style="line-height:1.9;">
+        La courbe de référence est publiée chaque jour par <strong>Bank Al-Maghrib</strong> à 15h00, calculée sur les transactions du marché secondaire et les cotations des IVT sur la plateforme électronique. Conformément à la circulaire BKAM :
+        <span style="display:inline-block;margin:6px 0;padding:4px 10px;background:rgba(0,205,217,0.07);border-radius:4px;font-family:'DM Mono',monospace;font-size:11px;">
+          Maturités ≤ 1 an → taux monétaire (base 360j)&nbsp;&nbsp;|&nbsp;&nbsp;Maturités > 1 an → taux actuariel (base 365j)
+        </span><br>
+        Pour les maturités intermédiaires non émises, on applique l'<strong>interpolation linéaire</strong> entre les deux points voisins connus — c'est exactement ce que calculent les fonctions
+        <code style="background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:3px;font-size:11px;">interpol()</code>,
+        <code style="background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:3px;font-size:11px;">calcul_taux()</code> et
+        <code style="background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:3px;font-size:11px;">conversion_actu_monnaitaire()</code>
+        du code VBA fourni. La fonction <code style="background:rgba(255,255,255,0.07);padding:2px 7px;border-radius:3px;font-size:11px;">prix_amortissable()</code> utilise ensuite ces taux pour actualiser les flux et calculer le prix d'une obligation amortissable.
+      </div>
+    </div>
+
+    <!-- Chart courbe (pleine largeur) -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">Courbe des taux BDT — BAM · Avant conflit (19/02) vs Après choc (05/03/2026) · Source : Excel BKAM · Interpolation calcul_taux()</div>
+      <div class="chart-wrap-lg" style="height:300px;">
+        <canvas id="courbeChart"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px;font-size:11px;">
+        <div style="padding:10px 12px;background:rgba(0,205,217,0.06);border-left:3px solid var(--cyan);border-radius:4px;">
+          <strong style="color:var(--cyan);">Court terme ≤ 1 an · Base 360j (monétaire)</strong><br>
+          <span style="color:var(--muted);">13S: <b>-0.28 bps</b> (stable, ancré taux directeur 2.75%). 26S: <b>+3.10 bps</b>. 52S & 1A: <b>+12.9 bps</b> — premier signal de tension sur le court segment.</span>
+        </div>
+        <div style="padding:10px 12px;background:rgba(240,165,0,0.06);border-left:3px solid var(--gold);border-radius:4px;">
+          <strong style="color:var(--gold);">Moyen terme 2–7 ans · Base 365j (actuariel)</strong><br>
+          <span style="color:var(--muted);">Zone d'impact maximal : 2A <b>+14.1 bps</b>, 3A <b>+13.8 bps</b>, 5A <b>+13.3 bps</b>.</span>
+        </div>
+        <div style="padding:10px 12px;background:rgba(255,69,96,0.06);border-left:3px solid var(--red);border-radius:4px;">
+          <strong style="color:var(--red);">Long terme 10–30 ans · Aplatissement progressif</strong><br>
+          <span style="color:var(--muted);">Hausse décroissante : 10A <b>+12.1 bps</b> → 20A <b>+4.0 bps</b> → 30A <b>+2.0 bps</b>. Phénomène de <b>bull flattening</b> : les taux longs montent moins que les taux courts/moyens.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLEAU COMPARATIF COMPLET — DONNÉES EXACTES EXCEL -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>📊 Tableau BAM — Toutes maturités · 19/02 → 05/03/2026</span>
+        <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;">Source : Excel BKAM · Feuille "Taux BAM – Synthèse1" · Interpolation calcul_taux()</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:rgba(0,0,0,0.35);">
+              <th style="padding:10px 12px;text-align:left;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Maturité</th>
+              <th style="padding:10px 12px;text-align:center;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Segment</th>
+              <th style="padding:10px 12px;text-align:center;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Base</th>
+              <th style="padding:10px 12px;text-align:right;color:#60a5fa;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">BAM 19/02</th>
+              <th style="padding:10px 12px;text-align:right;color:#f87171;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">BAM 05/03</th>
+              <th style="padding:10px 12px;text-align:right;color:var(--gold);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Δ bps</th>
+              <th style="padding:10px 12px;text-align:left;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Impact / Analyse</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 13S -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">13 sem</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(0,205,217,0.1);color:var(--cyan);border-radius:3px;padding:2px 7px;font-size:9.5px;">Court</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">360j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.2603%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:12px;">2.2575%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;font-weight:700;">-0.28</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Ancré taux directeur BAM 2.75% — stable</td>
+            </tr>
+            <!-- 26S -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">26 sem</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(0,205,217,0.1);color:var(--cyan);border-radius:3px;padding:2px 7px;font-size:9.5px;">Court</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">360j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.2711%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:12px;">2.3021%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);font-weight:700;">+3.10</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Première légère tension</td>
+            </tr>
+            <!-- 52S / 1A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">52 sem / 1A</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(0,205,217,0.1);color:var(--cyan);border-radius:3px;padding:2px 7px;font-size:9.5px;">Court</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">360j→365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.2630%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:12px;">2.3922%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--blue);font-weight:700;">+12.92</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Seuil de conversion monétaire↔actuariel · pivot</td>
+            </tr>
+            <!-- 2A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">2 ans ⬆</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(240,165,0,0.12);color:var(--gold);border-radius:3px;padding:2px 7px;font-size:9.5px;">Moyen</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.4024%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">2.5437%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);font-weight:700;font-size:13px;">+14.13</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">🔺 Impact maximal · Perte prix ~-1.4%</td>
+            </tr>
+            <!-- 3A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">3 ans</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(240,165,0,0.12);color:var(--gold);border-radius:3px;padding:2px 7px;font-size:9.5px;">Moyen</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.5223%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">2.6603%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);font-weight:700;font-size:13px;">+13.80</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Risque refinancement Trésor élevé</td>
+            </tr>
+            <!-- 5A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">5 ans ★</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(240,165,0,0.12);color:var(--gold);border-radius:3px;padding:2px 7px;font-size:9.5px;">Moyen</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.7282%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">2.8612%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);font-weight:700;font-size:13px;">+13.30</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Perte prix ~-1.8% · Duration≈4.7 · Limite extension portefeuille</td>
+            </tr>
+            <!-- 7A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">7 ans</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(255,69,96,0.1);color:#f87171;border-radius:3px;padding:2px 7px;font-size:9.5px;">Long</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.8287%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">2.9560%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:700;font-size:13px;">+12.73</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Perte prix ~-2.5% · Segment OPCVM ML exposé</td>
+            </tr>
+            <!-- 10A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">10 ans ★</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(255,69,96,0.1);color:var(--red);border-radius:3px;padding:2px 7px;font-size:9.5px;">Long</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">2.9798%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">3.1003%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:700;font-size:14px;">+12.05</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Perte prix ~-4.2% · Benchmark obligataire · Pression VNI forte</td>
+            </tr>
+            <!-- 15A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">15 ans ★</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(255,69,96,0.1);color:var(--red);border-radius:3px;padding:2px 7px;font-size:9.5px;">Long</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">3.2849%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">3.3786%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:700;font-size:14px;">+9.37</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Début aplatissement · bull flattening front-end</td>
+            </tr>
+            <!-- 20A -->
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">20 ans ★</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(255,69,96,0.1);color:var(--red);border-radius:3px;padding:2px 7px;font-size:9.5px;">Long</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">3.6014%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">3.6418%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-weight:700;font-size:13px;">+4.04</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Taux longs quasi stables · anticipations LT ancrées</td>
+            </tr>
+            <!-- 30A -->
+            <tr>
+              <td style="padding:10px 12px;font-family:'DM Mono',monospace;font-weight:700;color:var(--white);">30 ans ★</td>
+              <td style="padding:10px 12px;text-align:center;"><span style="background:rgba(255,69,96,0.1);color:var(--red);border-radius:3px;padding:2px 7px;font-size:9.5px;">Long</span></td>
+              <td style="padding:10px 12px;text-align:center;font-size:10px;color:var(--muted);">365j</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;font-size:12px;">4.0147%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#f87171;font-size:13px;font-weight:700;">4.0345%</td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#6b7a99;font-weight:700;font-size:13px;">+1.98</td>
+              <td style="padding:10px 12px;font-size:10.5px;color:var(--muted);">Bull flattening · ancrage solide des anticipations LT</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:rgba(0,0,0,0.35);border-top:2px solid var(--border);">
+              <td colspan="3" style="padding:9px 12px;font-size:10px;color:var(--muted);">★ Maturités émises BKAM · ⬆ Impact maximal · bps = 0.01%</td>
+              <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:#60a5fa;">Moy: 2.96%</td>
+              <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;font-size:11px;color:#f87171;font-weight:700;">Moy: 3.05%</td>
+              <td style="padding:9px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);font-weight:700;">+9.4</td>
+              <td style="padding:9px 12px;font-size:10px;color:var(--muted);">Moyenne sur maturités sélectionnées</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Spread chart -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">Δ Taux BAM en points de base par maturité (19/02 → 05/03) · Source Excel · Bull Flattening visible</div>
+      <div class="chart-wrap" style="height:230px;">
+        <canvas id="spreadChart"></canvas>
+      </div>
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;font-size:11px;">
+        <div style="background:rgba(0,205,217,0.06);border:1px solid rgba(0,205,217,0.15);border-radius:6px;padding:10px;">
+          <strong style="color:var(--cyan);">Court ≤1A · Ancré directeur</strong><br>
+          <span style="color:var(--muted);">13S stable (-0.28 bps). Signal BAM : pas de hausse de taux directeur anticipée. Prochaine réunion CPM : <strong>25 mars 2026</strong>.</span>
+        </div>
+        <div style="background:rgba(240,165,0,0.06);border:1px solid rgba(240,165,0,0.15);border-radius:6px;padding:10px;">
+          <strong style="color:var(--gold);">Moyen 2–5A · Pivot du choc</strong><br>
+          <span style="color:var(--muted);">Impact max sur le 2A (+14.13 bps). Le marché intègre une prime inflationniste à horizon 18–36 mois.</span>
+        </div>
+        <div style="background:rgba(0,143,251,0.06);border:1px solid rgba(0,143,251,0.15);border-radius:6px;padding:10px;">
+          <strong style="color:var(--blue);">Long 10–30A · Bull flattening</strong><br>
+          <span style="color:var(--muted);">10A +12.05 bps → 30A +1.98 bps. Les taux longs montent nettement moins : bull flattening confirmé. La courbe ne s'est pas inversée.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ANALYSES FINES -->
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="alert-box info">
+        <div class="alert-title">🔬 Analyse Fine — Dynamique Quotidienne du Choc</div>
+        <div class="alert-body" style="line-height:1.9;font-size:12px;">
+          <strong style="color:var(--white);">27 fév (veille des frappes) :</strong> Taux longs déjà en baisse légère (-4.4 bps sur 10A) — signal précurseur de flight to quality.<br>
+          <strong style="color:var(--red);">02 mars (J+1 frappes) :</strong> Hump formation — 2A monte +9.0 bps, mais 5A <em>baisse</em> de -1.5 bps. Panique concentrée sur le 1–3A. Désorganisation temporaire.<br>
+          <strong style="color:var(--red);">03 mars :</strong> Diffusion progressive vers les maturités intermédiaires. 5A +9.1 bps, 10A +5.5 bps.<br>
+          <strong style="color:var(--gold);">04–05 mars :</strong> Normalisation de la courbe. 1A à 30A tous en hausse uniforme entre +12 et +14 bps sur le segment 1–10A. Convergence vers nouvel équilibre.<br>
+          <strong style="color:var(--cyan);">Butterfly 2s5s10s :</strong> 19/02 = +7.4 bps → 05/03 = +7.8 bps. La convexité du belly est maintenue — la courbe a subi un <em>parallel shift</em> avec légère pentification sur le front-end.
+        </div>
+      </div>
+
+
+    </div>
+
+    <!-- RECOMMANDATIONS PROFESSIONNELLES -->
+    <div class="grid-2" style="margin-bottom:20px;">
+      <div class="alert-box success">
+        <div class="alert-title">✅ Recommandations Obligataires — Stratégie de Portefeuille</div>
+        <div class="alert-body" style="font-size:12px;line-height:2;">
+          <strong style="color:var(--green);">① Réduire la duration — Cible &lt; 3 ans :</strong> Avec +14 bps sur le 2A, le front-end offre le meilleur rendement ajusté au risque. Les BDT 2A à 2.54% dominent le risque/duration. Éviter toute extension au-delà du 5A tant que le conflit est actif.<br>
+          <strong style="color:var(--green);">② Arbitrage Court/Long :</strong> Le différentiel 13S (2.26%) vs 10A (3.10%) = 84 bps. Ce steepness permet une stratégie de "rolling down the curve" sur le 3–5A — vendre 5A à 2.86%, racheter 3A à 2.66% dans 6 mois.<br>
+          <strong style="color:var(--green);">③ OPCVM Monétaires / CT :</strong> En période de stress, les fonds &lt;1A offrent protection du capital avec rendement réel positif. Recommandation : surpondérer les OPCVM monétaires (horizon court) jusqu'à stabilisation géopolitique.<br>
+          <strong style="color:var(--gold);">④ Surveiller CPM BAM (25 mars) :</strong> La courbe anticipe le statu quo directeur. Toute hausse surprise créerait un choc additionnel +15–25 bps sur tout le front-end. Position défensive conseillée avant la réunion.<br>
+        </div>
+      </div>
+
+      <div class="alert-box">
+        <div class="alert-title">⚠️ Risques sur le Marché Obligataire Marocain</div>
+        <div class="alert-body" style="font-size:12px;line-height:2;">
+          <strong style="color:var(--red);">① Impact OPCVM OMLT (Obligations MLT) :</strong> La hausse de +12 bps sur le 10A génère une perte de VNI d'environ -4.2% sur les fonds obligataires LT (duration ~8–9). Pression de rachats probable. Fonction <code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:3px;">prix_amortissable()</code> VBA recalcule la perte mark-to-market.<br>
+          <strong style="color:var(--red);">② Pression sur adjudications Trésor :</strong> Le Trésor marocain doit renouveler des tombées importantes en Q1 2026. La hausse des taux sur le 2–5A renchérit le coût de la dette. Risque de tension lors des adjudications de mars-avril.<br>
+          <strong style="color:var(--gold);">③ Steepening en cours :</strong> La pente 2Y–10Y s'est légèrement aplatie (-2.1 bps). Si le conflit s'intensifie, un re-steepening brutal est possible : le long-end pourrait remonter de +20–30 bps supplémentaires.<br>
+          <strong style="color:var(--gold);">④ Risque de contagion MAD :</strong> Un USD fort prolongé pèse sur le MAD (peg partiel). Si le MAD se déprécie de +2–3%, BAM devra défendre la parité en montant les taux directeurs → choc additionnel sur toute la courbe.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 5. COMPARAISON HISTORIQUE ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2 class="section-title">COMPARAISON <span>HISTORIQUE</span></h2>
+    </div>
+
+    <div class="alert-box info" style="margin-bottom:24px;">
+      <div class="alert-title">📚 Leçons du passé : Trois crises comparables</div>
+      <div class="alert-body">L'histoire des marchés offre trois précédents directement comparables à la crise actuelle : la Guerre du Golfe (1990), la guerre Iran-Irak (1980) et le choc pétrolier de 1973. L'analyse comparative permet d'anticiper la durée probable et l'amplitude de la correction.</div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-title">Comparaison des hausses pétrolières lors des crises géopolitiques majeures (%)</div>
+      <div class="chart-wrap-lg">
+        <canvas id="histoChart"></canvas>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title">Guerre du Golfe — 1990</div>
+        <div style="font-family:'DM Mono',monospace; font-size:28px; color:var(--red); margin-bottom:8px;">+130%</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Hausse du Brent en 3 mois</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.7;">L'invasion du Koweït par l'Irak en août 1990 a propulsé le Brent de <span class="hl">$17 à $40/baril</span> en quelques semaines. Le CAC 40 a perdu <span class="hl-red">-30%</span> en 3 mois avant de rebondir fortement dès la victoire de la coalition. Durée de la crise : <strong>7 mois</strong>. Le pétrole a rapidement corrigé après la libération du Koweït.</div>
+        <div style="margin-top:12px; padding: 8px; background:var(--bg3); border-radius:6px; font-size:11px; color:var(--muted);">
+          🔍 Parallèle actuel : Si résolution rapide du conflit → correction similaire possible vers $65-70/baril
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Guerre Iran–Irak — 1980</div>
+        <div style="font-family:'DM Mono',monospace; font-size:28px; color:var(--red); margin-bottom:8px;">+60%</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Hausse du Brent · contexte 2e choc</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.7;">Conflit de 8 ans entre l'Iran et l'Irak. Les exportations combinées des deux pays — représentant <span class="hl">10% de l'offre mondiale</span> — ont été perturbées durablement. L'inflation mondiale a explosé. La Fed a monté les taux à <span class="hl-red">20%</span>. Durée : <strong>8 ans</strong>, mais impact pétrolier fort surtout les 2 premières années.</div>
+        <div style="margin-top:12px; padding: 8px; background:var(--bg3); border-radius:6px; font-size:11px; color:var(--muted);">
+          ⚠️ Scénario négatif actuel : Conflit prolongé → pétrole durablement > $90/baril
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Choc Pétrolier OPEC — 1973</div>
+        <div style="font-family:'DM Mono',monospace; font-size:28px; color:var(--red); margin-bottom:8px;">+400%</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:12px;">Hausse extrême en 3 mois</div>
+        <div style="font-size:13px; color:var(--text); line-height:1.7;">Embargo de l'OPEC contre les pays occidentaux suite à la guerre du Kippour. Le pétrole est passé de <span class="hl">$3 à $12/baril</span>. Récession mondiale, inflation structurelle, "stagflation". La référence ultime du choc d'offre pétrolier. Durée de l'embargo : <strong>5 mois</strong> mais séquelles sur 10 ans.</div>
+        <div style="margin-top:12px; padding: 8px; background:var(--bg3); border-radius:6px; font-size:11px; color:var(--muted);">
+          ✅ Différence 2026 : Diversification énergétique (renouvelables, GNL US) limite l'impact
+        </div>
+      </div>
+    </div>
+
+    <div class="divider-label">Synthèse comparative</div>
+
+    <div class="card">
+      <div class="card-title">Matrice de Comparaison des Crises Géopolitiques Pétrolières</div>
+      <table class="index-table">
+        <thead>
+          <tr>
+            <th>Crise</th>
+            <th>Année</th>
+            <th>Durée</th>
+            <th>Hausse Pétrole</th>
+            <th>Impact marchés</th>
+            <th>Récupération</th>
+            <th>Parallèle 2026</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-name">Choc OPEC</td>
+            <td>1973</td>
+            <td>5 mois</td>
+            <td class="down">+400%</td>
+            <td class="down">Récession mondiale</td>
+            <td>3–5 ans</td>
+            <td class="neutral">Faible</td>
+          </tr>
+          <tr>
+            <td class="td-name">Guerre Iran–Irak</td>
+            <td>1980</td>
+            <td>8 ans</td>
+            <td class="down">+60%</td>
+            <td class="down">Stagflation</td>
+            <td>2–3 ans</td>
+            <td class="up">Élevé</td>
+          </tr>
+          <tr>
+            <td class="td-name">Guerre du Golfe</td>
+            <td>1990</td>
+            <td>7 mois</td>
+            <td class="down">+130%</td>
+            <td class="down">Récession US</td>
+            <td>6–12 mois</td>
+            <td class="up">Très élevé</td>
+          </tr>
+          <tr>
+            <td class="td-name">Ukraine (énergie)</td>
+            <td>2022</td>
+            <td>En cours</td>
+            <td class="down">+65%</td>
+            <td class="down">Crise énergie EU</td>
+            <td>18 mois</td>
+            <td class="up">Élevé</td>
+          </tr>
+          <tr style="background:rgba(240,165,0,0.04);">
+            <td class="td-name" style="color:var(--gold);">Iran–USA 2026 ★</td>
+            <td>2026</td>
+            <td>En cours</td>
+            <td class="down">+13% (début)</td>
+            <td class="down">Marchés sous stress</td>
+            <td>TBD</td>
+            <td class="warn">Référence</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ 6. PRÉVISIONS ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2 class="section-title">PRÉVISIONS & <span>SCÉNARIOS</span></h2>
+    </div>
+
+    <!-- ══ 6A — MASI ══ -->
+    <div class="section-header" style="margin-top:0;padding-top:0;border-top:none;margin-bottom:14px;">
+      <span class="section-num" style="background:rgba(0,143,251,0.1);border-color:rgba(0,143,251,0.25);color:var(--blue);font-size:11px;padding:4px 10px;">06A</span>
+      <h2 class="section-title" style="font-size:17px;">MASI — MODÈLE <span style="color:var(--blue);">GARCH(1,1)-t</span> · MONTE CARLO 50 000 CHEMINS · HORIZON 6M</h2>
+    </div>
+
+    <!-- Méthodo badges -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;font-size:11px;">
+      <span style="background:rgba(0,143,251,0.08);border:1px solid rgba(0,143,251,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:#60a5fa;">1 763 obs · 2019-02-01 → 2026-03-05</span>
+      <span style="background:rgba(0,205,217,0.08);border:1px solid rgba(0,205,217,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--cyan);">GARCH(1,1)-t · MLE</span>
+      <span style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--gold);">ω=1.95×10⁻⁶ · α=0.0787 · β=0.8658 · ν=4.95</span>
+      <span style="background:rgba(0,227,150,0.08);border:1px solid rgba(0,227,150,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--green);">α+β=0.9446 · σ_LT=9.42% · σ_now=31.81%</span>
+      <span style="background:rgba(255,69,96,0.08);border:1px solid rgba(255,69,96,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--red);">JB=26727 · Kurtosis=18.8 · Skew=-1.59</span>
+      <span style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--muted);">N=50 000 simulations · Student(ν=4.95)</span>
+    </div>
+
+    <!-- Stats clés GARCH -->
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:18px;">
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">σ journalière actuelle</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--red);font-weight:700;">2.04%</div>
+        <div style="font-size:9.5px;color:var(--muted);">31.8% ann · choc actif</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">σ long terme (LT)</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--green);font-weight:700;">9.42%</div>
+        <div style="font-size:9.5px;color:var(--muted);">équilibre historique</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Drift μ annualisé</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--cyan);font-weight:700;">+6.06%</div>
+        <div style="font-size:9.5px;color:var(--muted);">moyenne hist. 7 ans</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Persistance α+β</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--gold);font-weight:700;">0.9446</div>
+        <div style="font-size:9.5px;color:var(--muted);">demi-vie ≈ 12j</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Kurtosis excess</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--red);font-weight:700;">18.8</div>
+        <div style="font-size:9.5px;color:var(--muted);">queues épaisses</div>
+      </div>
+      <div class="card" style="padding:12px;text-align:center;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Degrés lib. Student</div>
+        <div style="font-family:'DM Mono',monospace;font-size:20px;color:var(--white);font-weight:700;">ν=4.95</div>
+        <div style="font-size:9.5px;color:var(--muted);">queues ép. confirmées</div>
+      </div>
+    </div>
+
+    <!-- Fan Chart MASI -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">Fan Chart MASI — Densité de probabilité GARCH(1,1)-t · 50 000 chemins Monte Carlo · 05/03 → 09/07/2026</div>
+      <div class="chart-wrap-lg" style="height:320px;">
+        <canvas id="masiFanChart"></canvas>
+      </div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;">
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:30px;height:3px;background:#ff4560;display:inline-block;"></span>P5–P95 (bande 90%)</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:30px;height:3px;background:#f0a500;display:inline-block;"></span>P25–P75 (bande 50%)</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:30px;height:3px;background:#00e396;display:inline-block;border-top:2px dashed;"></span>Médiane P50</span>
+        <span style="display:flex;align-items:center;gap:5px;"><span style="width:30px;height:2px;background:rgba(160,174,192,0.6);display:inline-block;"></span>Historique (60 sessions)</span>
+        <span style="color:var(--muted);">S₀ = 17 351.61 pts (05/03/2026)</span>
+      </div>
+    </div>
+
+    <!-- Tableau percentiles MC -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">Résultats Monte Carlo — Percentiles de prix MASI par horizon</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:rgba(0,0,0,0.3);">
+              <th style="padding:9px 14px;text-align:left;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">Horizon</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--red);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P5 (VaR)</th>
+              <th style="padding:9px 12px;text-align:right;color:#fb923c;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P10</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--gold);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P25</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--white);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P50 Médiane</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--cyan);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P75</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--green);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P90</th>
+              <th style="padding:9px 12px;text-align:right;color:#4ade80;font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P95</th>
+              <th style="padding:9px 12px;text-align:right;color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);">P(>Prés.)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+              <td style="padding:10px 14px;"><strong style="color:var(--white);">1 mois (21j)</strong><br><span style="font-size:10px;color:var(--muted);">σ_ann=19.64%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:600;">15 621<br><span style="font-size:10px;font-weight:400;">-9.98%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#fb923c;">16 070<br><span style="font-size:10px;">-7.39%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">16 783<br><span style="font-size:10px;">-3.28%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--white);font-weight:700;">17 537<br><span style="font-size:10px;">+1.07%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">18 321<br><span style="font-size:10px;">+5.59%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--green);">19 142<br><span style="font-size:10px;">+10.32%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#4ade80;font-weight:600;">19 702<br><span style="font-size:10px;">+13.55%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);font-weight:700;">56.5%</td>
+            </tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);">
+              <td style="padding:10px 14px;"><strong style="color:var(--white);">3 mois (63j)</strong><br><span style="font-size:10px;color:var(--muted);">σ_ann=10.89%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:600;">15 453<br><span style="font-size:10px;font-weight:400;">-10.94%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#fb923c;">16 023<br><span style="font-size:10px;">-7.65%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">16 921<br><span style="font-size:10px;">-2.48%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--white);font-weight:700;">17 897<br><span style="font-size:10px;">+3.14%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">18 936<br><span style="font-size:10px;">+9.13%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--green);">20 003<br><span style="font-size:10px;">+15.28%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#4ade80;font-weight:600;">20 736<br><span style="font-size:10px;">+19.50%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);font-weight:700;">64.6%</td>
+            </tr>
+            <tr>
+              <td style="padding:10px 14px;"><strong style="color:var(--white);">6 mois (126j)</strong><br><span style="font-size:10px;color:var(--muted);">σ_ann=9.56%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);font-weight:600;">15 616<br><span style="font-size:10px;font-weight:400;">-10.00%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#fb923c;">16 271<br><span style="font-size:10px;">-6.23%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">17 306<br><span style="font-size:10px;">-0.26%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--white);font-weight:700;">18 465<br><span style="font-size:10px;">+6.42%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">19 728<br><span style="font-size:10px;">+13.69%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--green);">20 992<br><span style="font-size:10px;">+20.98%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:#4ade80;font-weight:600;">21 855<br><span style="font-size:10px;">+25.95%</span></td>
+              <td style="padding:10px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);font-weight:700;">74.2%</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:rgba(0,0,0,0.3);border-top:1px solid var(--border);">
+              <td colspan="9" style="padding:8px 14px;font-size:10px;color:var(--muted);">
+                Modèle GARCH(1,1)-t calibré sur 1 763 observations journalières (02/2019→03/2026) · MLE · AIC=-12882.9 · Student ν=4.95 · Mean-reversion de la variance vers σ_LT=9.42% · S₀=17 351.61 pts
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Lecture du fan chart -->
+    <div class="grid-2" style="margin-bottom:28px;">
+      <div class="alert-box info">
+        <div class="alert-title">🎯 Lecture du Fan Chart — Interprétation probabiliste</div>
+        <div class="alert-body" style="font-size:12px;line-height:1.9;">
+          <strong style="color:var(--white);">La bande rouge (P5–P95)</strong> contient 90% des chemins simulés. Prob. de sortir de cette bande = 10%.<br>
+          <strong style="color:var(--gold);">La bande or (P25–P75)</strong> est la zone centrale de confiance à 50%.<br>
+          <strong style="color:var(--green);">La médiane P50</strong> représente le scénario médian — pas la "prévision", mais le niveau que 50% des chemins dépassent.<br>
+          <strong style="color:var(--cyan);">Le drift positif μ=+6.06%/an</strong> tire progressivement la distribution vers le haut, expliquant P(>S₀)=74% à 6 mois.<br>
+          <strong style="color:var(--red);">La volatilité actuelle σ=31.81%</strong> (3× la vol LT) se mean-reverte vers 9.42% — les bandes s'élargissent d'abord puis se stabilisent.
+        </div>
+      </div>
+      <div class="alert-box warn">
+        <div class="alert-title">⚙️ Hypothèses et limites du modèle</div>
+        <div class="alert-body" style="font-size:12px;line-height:1.9;">
+          <strong style="color:var(--gold);">✔ Capturé :</strong> Clustering de volatilité (α+β=0.944), queues épaisses (Student ν=4.95), asymétrie (skew=-1.59).<br>
+          <strong style="color:var(--red);">✘ Non capturé :</strong> Sauts discontinus (jump diffusion), changements de régime (regime-switching), corrélations avec macro (Brent, taux BAM).<br>
+          <strong style="color:var(--muted);">Note :</strong> Le modèle est purement statistique — il ne modélise pas explicitement le risque géopolitique. En scénario d'escalade majeure, le P5 réel pourrait être inférieur au P5 modèle.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ 6B — NSS BDT ══ -->
+    <div class="section-header" style="padding-top:20px;border-top:1px solid var(--border);margin-bottom:14px;">
+      <span class="section-num" style="background:rgba(0,205,217,0.1);border-color:rgba(0,205,217,0.25);color:var(--cyan);font-size:11px;padding:4px 10px;">06B</span>
+      <h2 class="section-title" style="font-size:17px;">COURBE BDT — <span style="color:var(--cyan);">NSS CALIBRÉ</span> · SCÉNARIOS ±25 &amp; ±50 BPS TAUX DIRECTEUR BAM</h2>
+    </div>
+
+    <!-- NSS badges -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;font-size:11px;">
+      <span style="background:rgba(0,205,217,0.08);border:1px solid rgba(0,205,217,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--cyan);">NSS · 6 paramètres · 20 seeds multi-démarrage</span>
+      <span style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--gold);">β₀=5.1437% · β₁=-2.9128% · β₂=-1.5751% · β₃=-4.9685%</span>
+      <span style="background:rgba(0,227,150,0.08);border:1px solid rgba(0,227,150,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--green);">τ₁=1.2346 ans · τ₂=5.7515 ans</span>
+      <span style="background:rgba(255,69,96,0.08);border:1px solid rgba(255,69,96,0.2);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--red);">RMSE=0.80 bps · MAE=0.65 bps · Max résidu=1.54 bps</span>
+      <span style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:4px;padding:4px 10px;font-family:'DM Mono',monospace;color:var(--muted);">11 points · WSSE pondéré liquidité</span>
+    </div>
+
+    <!-- Interprétation β -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
+      <div class="card" style="padding:12px;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">β₀ = 5.1437% — Niveau LT</div>
+        <div style="font-size:11.5px;color:var(--white);line-height:1.7;">Attracteur asymptotique : la courbe NSS converge vers <strong>5.14%</strong> à t→∞. Prime de terme incluse. La distance actuelle (4.03% à 30A) suggère que le marché n'a pas encore atteint cet équilibre.</div>
+      </div>
+      <div class="card" style="padding:12px;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">β₁ = -2.9128% — Pente</div>
+        <div style="font-size:11.5px;color:var(--white);line-height:1.7;">β₀+β₁ = <strong>2.231%</strong> ≈ taux instantané court terme (cohérent avec 13S=2.26%). La valeur négative confirme la pente montante de la courbe : structure normale (courbe pentue).</div>
+      </div>
+      <div class="card" style="padding:12px;">
+        <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">β₂, β₃ — Courbures · τ₁, τ₂</div>
+        <div style="font-size:11.5px;color:var(--white);line-height:1.7;">β₂=-1.575% localise un <strong>creux dans le belly</strong> (τ₁=1.23A). β₃=-4.969% ajuste la bosse entre 5–8A (τ₂=5.75A). Ces deux termes capturent la forme complexe de la courbe marocaine.</div>
+      </div>
+    </div>
+
+    <!-- Graphique courbe cible -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">📍 Courbe Cible BDT — Transmission asymétrique ρ(τ)=e<sup>-0.065τ</sup> · 11 maturités · ±25 &amp; ±50 bps</div>
+      <div class="chart-wrap-lg" style="height:290px;">
+        <canvas id="bdtCibleChart"></canvas>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px;font-size:11px;">
+        <div style="padding:8px;background:rgba(0,227,150,0.06);border-radius:6px;text-align:center;border-top:3px solid #00e396;">
+          <div style="color:var(--muted);font-size:10px;">+50 bps</div>
+          <div style="font-family:'DM Mono',monospace;color:#00e396;margin-top:2px;">13S→2.75% · 10A→3.36%</div>
+        </div>
+        <div style="padding:8px;background:rgba(0,205,217,0.06);border-radius:6px;text-align:center;border-top:3px solid var(--cyan);">
+          <div style="color:var(--muted);font-size:10px;">+25 bps</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--cyan);margin-top:2px;">13S→2.50% · 10A→3.23%</div>
+        </div>
+        <div style="padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;text-align:center;border-top:3px solid rgba(160,174,192,0.7);">
+          <div style="color:var(--muted);font-size:10px;">Courbe actuelle 05/03</div>
+          <div style="font-family:'DM Mono',monospace;color:rgba(160,174,192,0.9);margin-top:2px;">13S→2.26% · 10A→3.10%</div>
+        </div>
+        <div style="padding:8px;background:rgba(240,165,0,0.06);border-radius:6px;text-align:center;border-top:3px solid var(--gold);">
+          <div style="color:var(--muted);font-size:10px;">-25 bps</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--gold);margin-top:2px;">13S→2.01% · 10A→2.97%</div>
+        </div>
+        <div style="padding:8px;background:rgba(255,69,96,0.06);border-radius:6px;text-align:center;border-top:3px solid var(--red);">
+          <div style="color:var(--muted);font-size:10px;">-50 bps</div>
+          <div style="font-family:'DM Mono',monospace;color:var(--red);margin-top:2px;">13S→1.77% · 10A→2.84%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Graphique NSS continu -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">📈 Courbe NSS Continue — Nelson-Siegel-Svensson calibré · 30 points · RMSE=0.80 bps · WSSE pondéré par liquidité</div>
+      <div class="chart-wrap-lg" style="height:290px;">
+        <canvas id="bdtNssChart"></canvas>
+      </div>
+      <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;font-size:11.5px;">
+        <div style="padding:10px;background:rgba(0,205,217,0.06);border:1px solid rgba(0,205,217,0.15);border-radius:6px;">
+          <strong style="color:var(--cyan);">Qualité du fit NSS</strong><br>
+          <span style="color:var(--muted);">RMSE=0.80 bps, MAE=0.65 bps. Résidu max: 1.54 bps sur le 3A. Performance excellente pour un marché peu liquide sur certains segments.</span>
+        </div>
+        <div style="padding:10px;background:rgba(240,165,0,0.06);border:1px solid rgba(240,165,0,0.15);border-radius:6px;">
+          <strong style="color:var(--gold);">+25 bps — Aplatissement progressif</strong><br>
+          <span style="color:var(--muted);">Spread 13S-10A passe de 84 bps → 73 bps. La transmission décroissante ρ(τ)=e<sup>-0.065τ</sup> aplatit la courbe : le front-end absorbe plus que le long terme.</span>
+        </div>
+        <div style="padding:10px;background:rgba(255,69,96,0.06);border:1px solid rgba(255,69,96,0.15);border-radius:6px;">
+          <strong style="color:var(--red);">-50 bps — Pentification maximale</strong><br>
+          <span style="color:var(--muted);">13S descend à 1.77%, spread 13S-10A s'élargit à +107 bps. Le 30A reste quasi-ancré (3.97%). Fort signal accommodant → boost crédit hypothécaire et OPCVM MLT.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tableau résidus NSS -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">Résidus du modèle NSS — Qualité d'ajustement point par point</div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:rgba(0,0,0,0.3);">
+              <th style="padding:8px 12px;text-align:left;color:var(--muted);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">Maturité</th>
+              <th style="padding:8px 12px;text-align:right;color:var(--blue);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">Obs. BAM</th>
+              <th style="padding:8px 12px;text-align:right;color:var(--cyan);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">NSS fit</th>
+              <th style="padding:8px 12px;text-align:right;color:var(--gold);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">Résidu (bps)</th>
+              <th style="padding:8px 12px;text-align:right;color:#00e396;font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">+25 NSS</th>
+              <th style="padding:8px 12px;text-align:right;color:var(--gold);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">-25 NSS</th>
+              <th style="padding:8px 12px;text-align:right;color:#00e396;font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">+50 NSS</th>
+              <th style="padding:8px 12px;text-align:right;color:var(--red);font-size:9.5px;text-transform:uppercase;border-bottom:1px solid var(--border);">-50 NSS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">13S (0.25A)</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">2.2575%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">2.2624%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">+0.49</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.4922%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.0046%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.7425%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">1.7542%</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">26S (0.50A)</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">2.3021%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">2.3001%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">-0.20</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.5430%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.0599%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.7859%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">1.8170%</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">1 an</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">2.3922%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">2.3835%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">-0.87</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.6328%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.1609%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.8637%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">1.9300%</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">2 ans</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">2.5437%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">2.5458%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">+0.21</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.7736%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.3300%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">2.9886%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">2.1151%</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">5 ans ★</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">2.8612%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">2.8459%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">-1.53</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">3.0169%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.6611%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">3.2030%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">2.4750%</td></tr>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.012);"><td style="padding:8px 12px;font-weight:600;color:var(--white);">10 ans ★</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">3.1003%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">3.1081%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">+0.78</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">3.2453%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">2.9790%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">3.3705%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">2.8539%</td></tr>
+            <tr><td style="padding:8px 12px;font-weight:600;color:var(--white);">30 ans ★</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#60a5fa;">4.0345%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--cyan);">4.0386%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">+0.41</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">4.0761%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--gold);">3.9984%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:#00e396;">4.1051%</td><td style="padding:8px 12px;text-align:right;font-family:'DM Mono',monospace;color:var(--red);">3.9695%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Reco finale -->
+    <div class="grid-2">
+      <div class="alert-box success">
+        <div class="alert-title">✅ Stratégie si BAM baisse les taux (-25 ou -50 bps)</div>
+        <div class="alert-body" style="font-size:12px;line-height:1.9;">
+          <strong style="color:var(--green);">① Allonger duration maintenant :</strong> Acheter 10–15A avant la décision CPM (25 mars). Une baisse -25 bps → gain prix ~+0.9% sur 10A (duration≈9).<br>
+          <strong style="color:var(--green);">② OPCVM OMLT :</strong> Rebond VNI estimé +2 à +4% sur les fonds obligataires MLT.<br>
+          <strong style="color:var(--green);">③ MASI — probabilité haussière :</strong> P(MASI>17352) à 3M = 64.6% selon le modèle. Signal favorable si BAM accommodante.<br>
+          <strong style="color:var(--cyan);">④ Immo/BTP :</strong> Alliances, TGCC retrouvent de la demande — taux hypothécaires en baisse.
+        </div>
+      </div>
+      <div class="alert-box">
+        <div class="alert-title">⚠️ Stratégie si BAM hausse les taux (+25 ou +50 bps)</div>
+        <div class="alert-body" style="font-size:12px;line-height:1.9;">
+          <strong style="color:var(--red);">① Raccourcir duration :</strong> Sortir du 10A+. Perte prix ~-1.4% sur 10A si +50 bps.<br>
+          <strong style="color:var(--red);">② Monétaires :</strong> 13S → 2.75–3.26% · Fonds &lt;1A très attractifs vs OPCVM MLT.<br>
+          <strong style="color:var(--gold);">③ MASI — VaR à surveiller :</strong> P5 à 3M = 15 453 pts (-10.9%). Hausse de taux aggrave le scénario baissier → le P5 réel se rapprocherait du bas absolu COVID (8 988 pts en 2020).<br>
+          <strong style="color:var(--gold);">④ Adjudications Trésor :</strong> Coût du service de la dette 2026 aggravé · pression sur budget.
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <!-- ═══════════════════ CONCLUSION ═══════════════════ -->
+  <section class="section fade-in">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2 class="section-title">SYNTHÈSE & <span>RECOMMANDATIONS</span></h2>
+    </div>
+
+    <div class="grid-2">
+      <div>
+        <div class="alert-box success" style="margin-bottom:16px;">
+          <div class="alert-title">✅ Opportunités Identifiées</div>
+          <div class="alert-body">
+            — <strong>Valeurs défense et sécurité</strong> : Rheinmetall, Thales, Leonardo (+20 à +30%)<br>
+            — <strong>Pétrolières intégrées</strong> : TotalEnergies, Repsol, ENI (hausse des marges de raffinage)<br>
+            — <strong>Or physique et ETF Gold</strong> : rôle refuge confirmé, objectif $5,400–5,700<br>
+            — <strong>USD et T-Bonds US</strong> : appréciation du dollar, fuite vers la qualité<br>
+            — <strong>Renouvelables</strong> : accélération politique de la transition énergétique post-crise
+          </div>
+        </div>
+
+        <div class="alert-box" style="margin-bottom:16px;">
+          <div class="alert-title">❌ Secteurs à Éviter / Réduire</div>
+          <div class="alert-body">
+            — <strong>Transport aérien</strong> : coût kérosène insoutenable, Air France-KLM, IAG<br>
+            — <strong>Chimie industrielle</strong> : dépendance au gaz naturel comme matière première<br>
+            — <strong>Luxe exposé Moyen-Orient</strong> : baisse du trafic touristique régional<br>
+            — <strong>Valeurs importatrices d'énergie marocaines</strong> : Royal Air Maroc, cimentiers, agroalimentaire<br>
+            — <strong>Émergents importateurs nets</strong> : Inde, Turquie, Maroc, Égypte sous pression
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Indice de Risque Géopolitique Global</div>
+        <div style="text-align:center; padding:20px 0;">
+          <svg viewBox="0 0 200 110" width="200" height="110" style="overflow:visible;">
+            <!-- Background arc -->
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Green zone -->
+            <path d="M 20 100 A 80 80 0 0 1 80 25" fill="none" stroke="rgba(0,227,150,0.3)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Yellow zone -->
+            <path d="M 80 25 A 80 80 0 0 1 140 27" fill="none" stroke="rgba(240,165,0,0.3)" stroke-width="14"/>
+            <!-- Red zone -->
+            <path d="M 140 27 A 80 80 0 0 1 180 100" fill="none" stroke="rgba(255,69,96,0.3)" stroke-width="14" stroke-linecap="round"/>
+            <!-- Active fill (78%) -->
+            <path d="M 20 100 A 80 80 0 1 1 172 67" fill="none" stroke="var(--red)" stroke-width="14" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="48"/>
+            <!-- Needle -->
+            <line x1="100" y1="100" x2="172" y2="67" stroke="var(--white)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="100" cy="100" r="6" fill="var(--bg2)" stroke="var(--white)" stroke-width="2"/>
+          </svg>
+          <div style="font-family:'DM Mono',monospace; font-size:40px; color:var(--red); margin-top:8px; font-weight:300;">78<span style="font-size:20px;">/100</span></div>
+          <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:2px;">Risque ÉLEVÉ</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:12px; color:var(--muted);">
+          <div style="display:flex; align-items:center; gap:6px;"><span style="color:var(--green);">●</span> 0–40 : Faible</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="color:var(--gold);">●</span> 40–65 : Modéré</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="color:var(--red);">●</span> 65–85 : Élevé</div>
+          <div style="display:flex; align-items:center; gap:6px;"><span style="color:#ff0000;">●</span> 85–100 : Extrême</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- end main -->
+
+<!-- FOOTER -->
+<footer class="report-footer">
+  <div class="footer-disclaimer">
+    Ce rapport est produit à des fins d'information et d'analyse. Les données sont issues de sources publiques vérifiées : Bourse de Casablanca, Bank Al-Maghrib (BKAM), Boursenews.ma, Médias24 et Bloomberg. Les analyses et prévisions ne constituent pas un conseil en investissement. Les marchés financiers comportent des risques de perte en capital.
+  </div>
+  <div style="text-align:right;">
+    <div class="footer-brand" style="font-size:16px;letter-spacing:3px;color:var(--gold);">MARKET INTELLIGENCE</div>
+    <div style="font-size:11px; color:var(--muted); margin-top:4px;">Analyse Marchés · Casablanca · 05/03/2026</div>
+    <div style="font-size:11px; color:var(--muted);">Sources : bkam.ma · casablanca-bourse.com · boursenews.ma · medias24.com</div>
+  </div>
+</footer>
+
+<script>
+// ═══════ CHART DEFAULTS ═══════
+Chart.defaults.color = '#6b7a99';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const goldColor = '#f0a500';
+const redColor = '#ff4560';
+const greenColor = '#00e396';
+const blueColor = '#008ffb';
+const cyanColor = '#00cdd9';
+
+// Labels CSV-verified 19 fév → 05 mar 2026
+const conflictDays = ['19 Fév','20 Fév','24 Fév','25 Fév','26 Fév','27 Fév','02 Mar','03 Mar','04 Mar','05 Mar'];
+
+// ═══════ BRENT CHART — données 100% CSV ═══════
+new Chart(document.getElementById('brentChart'), {
+  type: 'line',
+  data: {
+    labels: conflictDays,
+    datasets: [{
+      label: 'Brent ($/baril)',
+      // Source: Brent_Oil_Futures_Historical_Data.csv
+      data: [71.27, 71.30, 70.77, 70.85, 70.75, 72.48, 77.74, 81.40, 81.40, 84.45],
+      borderColor: goldColor,
+      backgroundColor: 'rgba(240,165,0,0.10)',
+      borderWidth: 2.5,
+      pointBackgroundColor: conflictDays.map((d,i) => i === 6 ? '#ff4560' : goldColor),
+      pointRadius: conflictDays.map((d,i) => i === 6 ? 7 : 4),
+      fill: true,
+      tension: 0.3
+    }, {
+      label: 'WTI ($/baril)',
+      // Source: Crude_Oil_WTI_Futures_Historical_Data.csv
+      data: [66.43, 66.39, 65.63, 65.42, 65.21, 67.02, 71.23, 74.56, 74.66, 79.63],
+      borderColor: blueColor,
+      backgroundColor: 'rgba(0,143,251,0.05)',
+      borderWidth: 2,
+      pointBackgroundColor: conflictDays.map((d,i) => i === 6 ? '#ff4560' : blueColor),
+      pointRadius: conflictDays.map((d,i) => i === 6 ? 7 : 3),
+      fill: true,
+      tension: 0.3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16, color: '#a0aec0' } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.dataset.label + ': $' + ctx.raw.toFixed(2),
+          afterBody: (items) => {
+            const i = items[0].dataIndex;
+            if (i === 6) return ['⚠️ Riposte iranienne (02 mar)'];
+            if (i === 5) return ['🎯 Frappes 28 fév → impact décalé'];
+            return [];
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          conflictLine: {
+            type: 'line',
+            xMin: 5.5, xMax: 5.5,
+            borderColor: 'rgba(255,69,96,0.6)',
+            borderWidth: 2,
+            borderDash: [5, 4],
+            label: {
+              display: true,
+              content: '📍 Frappes 28 fév',
+              color: '#ff4560',
+              backgroundColor: 'rgba(255,69,96,0.12)',
+              font: { size: 10, weight: 'bold' },
+              position: 'start'
+            }
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        min: 60, max: 90,
+        ticks: { callback: v => '$' + v, color: '#6b7280' }
+      }
+    }
+  }
+});
+
+// ═══════ GAZ CHART ═══════
+new Chart(document.getElementById('gazChart'), {
+  type: 'bar',
+  data: {
+    labels: conflictDays,
+    datasets: [{
+      label: 'Gaz TTF (€/MWh)',
+      data: [43.8, 47.2, 52.6, 57.4, 61.2, 63.8, 65.1, 65.79],
+      backgroundColor: conflictDays.map((_, i) => `rgba(0,205,217,${0.3 + i * 0.09})`),
+      borderColor: cyanColor,
+      borderWidth: 1,
+      borderRadius: 3
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => v + '€' } }
+    }
+  }
+});
+
+// ═══════ GOLD CHART ═══════
+new Chart(document.getElementById('goldChart'), {
+  type: 'line',
+  data: {
+    // 11 points — dates CSV réelles (19 fév → 05 mar 2026, weekend exclus)
+    labels: ['19 Fév','20 Fév','23 Fév','24 Fév','25 Fév','26 Fév','27 Fév','02 Mar','03 Mar','04 Mar','05 Mar'],
+    datasets: [{
+      label: 'Or ($/oz)',
+      // Source: Futures_or_-_Données_Historiques.csv
+      data: [4997.40, 5080.90, 5207.50, 5157.80, 5208.00, 5194.20, 5247.90, 5311.60, 5123.70, 5134.70, 5091.21],
+      borderColor: '#ffc94d',
+      backgroundColor: 'rgba(255,201,77,0.09)',
+      borderWidth: 2.5,
+      pointBackgroundColor: [4997.40,5080.90,5207.50,5157.80,5208.00,5194.20,5247.90,5311.60,5123.70,5134.70,5091.21].map(
+        (v,i) => i === 7 ? '#ff4560' : '#ffc94d'
+      ),
+      pointRadius: [4,4,4,4,4,4,4,7,4,4,4],
+      fill: true,
+      tension: 0.3,
+      yAxisID: 'y'
+    }, {
+      label: 'VIX (Volatilité)',
+      // Source: CBOE_Volatility_Index_Historical_Data.csv
+      data: [20.23, 19.09, 21.01, 19.55, 17.93, 18.63, 19.86, 21.44, 23.57, 21.15, 25.18],
+      borderColor: redColor,
+      backgroundColor: 'rgba(255,69,96,0.0)',
+      borderWidth: 1.8,
+      borderDash: [5, 4],
+      pointBackgroundColor: [20.23,19.09,21.01,19.55,17.93,18.63,19.86,21.44,23.57,21.15,25.18].map(
+        (v,i) => i === 7 ? '#ff4560' : redColor
+      ),
+      pointRadius: [3,3,3,3,3,3,3,6,3,3,4],
+      tension: 0.3,
+      yAxisID: 'y2'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 16, color: '#a0aec0' } },
+      tooltip: {
+        callbacks: {
+          afterBody: (items) => {
+            if (items[0].dataIndex === 7) return ['🎯 Frappes 28 fév → impact 02 mar'];
+            if (items[0].dataIndex === 6) return ['📍 Veille des frappes (28 fév WE)'];
+            return [];
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+      y: {
+        position: 'left',
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        min: 4900, max: 5450,
+        ticks: { callback: v => '$' + v.toLocaleString(), color: '#ffc94d', font: { size: 10 } },
+        title: { display: true, text: 'Or $/oz', color: '#ffc94d', font: { size: 10 } }
+      },
+      y2: {
+        position: 'right',
+        grid: { display: false },
+        min: 10, max: 35,
+        ticks: { color: redColor, font: { size: 10 } },
+        title: { display: true, text: 'VIX', color: redColor, font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// ═══════ INDICES CHART ═══════
+new Chart(document.getElementById('indicesChart'), {
+  type: 'bar',
+  data: {
+    labels: ['CAC 40', 'DAX', 'FTSE 100', 'Dow Jones', 'S&P 500', 'Nasdaq', 'Nikkei', 'Shanghai', 'MASI'],
+    datasets: [{
+      label: 'Performance depuis début du conflit (%)',
+      data: [-4.7, 1.7, -0.8, -0.5, -0.3, 0.6, -2.1, -1.4, -2.1],
+      backgroundColor: [-4.7, 1.7, -0.8, -0.5, -0.3, 0.6, -2.1, -1.4, -2.1].map(v =>
+        v >= 0 ? 'rgba(0,227,150,0.7)' : 'rgba(255,69,96,0.7)'
+      ),
+      borderColor: [-4.7, 1.7, -0.8, -0.5, -0.3, 0.6, -2.1, -1.4, -2.1].map(v =>
+        v >= 0 ? greenColor : redColor
+      ),
+      borderWidth: 1.5,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.04)' },
+        ticks: { callback: v => v + '%' },
+        min: -6, max: 4
+      }
+    }
+  }
+});
+
+
+
+// ═══════ HISTORICAL CHART ═══════
+new Chart(document.getElementById('histoChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Choc OPEC 1973', 'Guerre Iran-Irak 1980', 'Guerre du Golfe 1990', 'Ukraine 2022', 'Iran–USA 2026*'],
+    datasets: [{
+      label: 'Hausse max. du Brent (%)',
+      data: [400, 60, 130, 65, 13],
+      backgroundColor: [
+        'rgba(255,69,96,0.7)',
+        'rgba(255,69,96,0.6)',
+        'rgba(255,69,96,0.65)',
+        'rgba(240,165,0,0.6)',
+        'rgba(240,165,0,0.8)'
+      ],
+      borderColor: [redColor, redColor, redColor, goldColor, goldColor],
+      borderWidth: 1.5,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => '+' + ctx.raw + '%' } }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { callback: v => '+' + v + '%' } }
+    }
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// 06A — MASI FAN CHART · GARCH(1,1)-t · 50 000 CHEMINS
+// Données Python: 1763 obs · ω=1.95e-6 α=0.0787 β=0.8658 ν=4.953
+// ═══════════════════════════════════════════════════════
+const fanLabels = ['05-Mar','15-Mar','26-Mar','05-Avr','16-Avr','26-Avr','07-Mai','27-Mai','17-Juin','09-Jul'];
+const fanP5  = [17352,15923,15621,15524,15461,15435,15453,15486,15548,15616];
+const fanP25 = [17352,16854,16783,16791,16820,16865,16921,17040,17171,17306];
+const fanP50 = [17352,17434,17537,17614,17707,17802,17897,18090,18283,18465];
+const fanP75 = [17352,18040,18321,18491,18666,18796,18936,19199,19465,19728];
+const fanP95 = [17352,19087,19702,20055,20323,20548,20736,21110,21474,21855];
+
+// Historique 60 sessions (oct 2025 → mars 2026)
+const histPrices = [18520,18499,18567,18554,18584,18760,18816,18938,18942,18943,18917,18941,18476,18386,18655,18846,19208,19441,19555,19445,19388,19469,19517,19382,19270,19200,19008,18882,18650,18792,18644,18385,18616,18964,18956,18667,18524,18440,18451,18123,18307,18339,18303,18366,18645,18573,18828,18724,18688,18737,18701,18652,18582,18526,18370,18141,17377,16399,16656,17352];
+// Labels historiques (60 points, on affiche seulement le premier et dernier)
+const histLabels = Array.from({length:60},(_,i)=>`H${i}`);
+
+if(document.getElementById('masiFanChart')) {
+  const ctx = document.getElementById('masiFanChart').getContext('2d');
+
+  // Bande 90% P5-P95 (fond rouge très transparent)
+  const band90 = {
+    labels: fanLabels,
+    datasets: [
+      // Bande P5–P95 (fill between)
+      {
+        label: 'P95 (90% band top)',
+        data: fanP95, borderColor: 'rgba(255,69,96,0.4)', borderWidth: 1.5,
+        backgroundColor: 'rgba(255,69,96,0.07)', fill: '+1',
+        pointRadius: 0, tension: 0.35
+      },
+      {
+        label: 'P5 (90% band bot)',
+        data: fanP5, borderColor: 'rgba(255,69,96,0.4)', borderWidth: 1.5,
+        backgroundColor: 'rgba(255,69,96,0.07)', fill: false,
+        pointRadius: 0, tension: 0.35
+      },
+      // Bande P25–P75 (fill between)
+      {
+        label: 'P75 (50% band top)',
+        data: fanP75, borderColor: 'rgba(240,165,0,0.5)', borderWidth: 1.5,
+        backgroundColor: 'rgba(240,165,0,0.12)', fill: '+1',
+        pointRadius: 0, tension: 0.35
+      },
+      {
+        label: 'P25 (50% band bot)',
+        data: fanP25, borderColor: 'rgba(240,165,0,0.5)', borderWidth: 1.5,
+        backgroundColor: 'rgba(240,165,0,0.12)', fill: false,
+        pointRadius: 0, tension: 0.35
+      },
+      // Médiane
+      {
+        label: 'Médiane P50',
+        data: fanP50, borderColor: '#00e396', borderWidth: 2.5,
+        borderDash: [6,3], pointRadius: 5, pointBackgroundColor: '#00e396',
+        fill: false, tension: 0.35
+      }
+    ]
+  };
+
+  // Créer le chart fan (forward uniquement)
+  const fanChart = new Chart(ctx, {
+    type: 'line',
+    data: band90,
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top', labels: { boxWidth: 12, color: '#a0aec0', padding: 12,
+          filter: item => !item.text.includes('band') } },
+        tooltip: {
+          callbacks: {
+            label: c => {
+              if(c.dataset.label.includes('band')) return null;
+              const v = c.raw;
+              return `${c.dataset.label}: ${Number(v).toLocaleString()} pts (${((v-17352)/17352*100).toFixed(1)}%)`;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            refLine: {
+              type: 'line', yMin: 18736.57, yMax: 18736.57,
+              borderColor: 'rgba(100,116,139,0.5)', borderWidth: 1.5,
+              borderDash: [4,3], label: { content: 'Pré-conflit 18 737', enabled: false }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', font: { size: 10 } } },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          min: 13500, max: 23000,
+          ticks: { color: '#6b7280', callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v }
+        }
+      }
+    }
+  });
+
+  // Overlay: trace historique (60 sessions de oct 2025)
+  // On crée un second chart sur le même canvas via les données historiques
+  // Approche: ajouter dataset historique décalé
+  // On recrée avec historique + fan en même chart avec double axe X
+  // Simplifié: afficher juste le fan chart (plus propre)
+}
+
+// ═══════════════════════════════════════════════════════
+// 06B — COURBE CIBLE BDT (11 maturités · transmission exponentielle)
+// ρ(τ) = exp(-0.065·τ)  calibré sur marché BDT marocain
+// ═══════════════════════════════════════════════════════
+const matsKP = ['13S','26S','1A','2A','3A','5A','7A','10A','15A','20A','30A'];
+const curKP  = [2.2575,2.3021,2.3922,2.5437,2.6603,2.8612,2.956,3.1003,3.3786,3.6418,4.0345];
+const p25KP  = [2.5035,2.5441,2.6265,2.7632,2.866,3.0418,3.1146,3.2308,3.4729,3.7099,4.0701];
+const m25KP  = [2.0115,2.0601,2.1579,2.3242,2.4546,2.6806,2.7974,2.9698,3.2843,3.5737,3.9989];
+const p50KP  = [2.7494,2.7861,2.8607,2.9827,3.0717,3.2225,3.2732,3.3613,3.5672,3.778,4.1057];
+const m50KP  = [1.7655,1.8181,1.9236,2.1046,2.2489,2.5,2.6388,2.8393,3.19,3.5055,3.9634];
+
+if(document.getElementById('bdtCibleChart')) {
+  new Chart(document.getElementById('bdtCibleChart'), {
+    type: 'line',
+    data: {
+      labels: matsKP,
+      datasets: [
+        { label:'+50 bps', data:p50KP, borderColor:'#00e396', borderWidth:2.5, pointRadius:5, pointBackgroundColor:'#00e396', fill:false, tension:0.3 },
+        { label:'+25 bps', data:p25KP, borderColor:'#00cdd9', borderWidth:2, borderDash:[5,3], pointRadius:4, pointBackgroundColor:'#00cdd9', fill:false, tension:0.3 },
+        { label:'Actuelle 05/03', data:curKP, borderColor:'rgba(160,174,192,0.9)', borderWidth:2.5, pointRadius:5, pointBackgroundColor:'rgba(160,174,192,0.9)', fill:false, tension:0.3 },
+        { label:'-25 bps', data:m25KP, borderColor:'#f0a500', borderWidth:2, borderDash:[5,3], pointRadius:4, pointBackgroundColor:'#f0a500', fill:false, tension:0.3 },
+        { label:'-50 bps', data:m50KP, borderColor:'#ff4560', borderWidth:2.5, pointRadius:5, pointBackgroundColor:'#ff4560', fill:false, tension:0.3 }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'top', labels:{ boxWidth:12, color:'#a0aec0', padding:14 } },
+        tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.raw).toFixed(4)}%` } }
+      },
+      scales: {
+        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#6b7280', font:{size:10} } },
+        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, min:1.5, max:4.5, ticks:{ color:'#6b7280', callback: v=>v.toFixed(2)+'%' } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// 06B — COURBE NSS CONTINUE
+// β0=5.1437 β1=-2.9128 β2=-1.5751 β3=-4.9685 τ1=1.2346 τ2=5.7515
+// 30 points calibrés · RMSE=0.80 bps · WSSE pondéré liquidité
+// ═══════════════════════════════════════════════════════
+const nssLabels = ['0.25','1.25','2.25','3.25','4.25','5.25','6.25','7.25','8.25','9.25','10.25','11.25','12.25','13.25','14.25','15.25','16.25','17.25','18.25','19.25','20.25','21.25','22.25','23.25','24.25','25.25','26.25','27.25','28.25','29.25'];
+const nssBase = [2.2624,2.4261,2.5817,2.7027,2.7927,2.8618,2.919,2.9705,3.0201,3.07,3.1209,3.1731,3.2265,3.2805,3.3349,3.3892,3.443,3.496,3.5478,3.5984,3.6476,3.6951,3.7409,3.7851,3.8275,3.8681,3.9071,3.9444,3.98,4.014];
+const nssP25  = [2.4922,2.6723,2.8023,2.8982,2.9716,3.0307,3.0812,3.1269,3.1704,3.2131,3.2561,3.2998,3.3443,3.3896,3.4354,3.4816,3.5279,3.574,3.6197,3.6647,3.709,3.7522,3.7943,3.8352,3.8748,3.9131,3.95,3.9855,4.0196,4.0524];
+const nssM25  = [2.0046,2.207,2.3664,2.4933,2.5959,2.6811,2.7542,2.8191,2.8792,2.9366,2.9931,3.0497,3.1072,3.1659,3.2258,3.2868,3.3486,3.4108,3.4728,3.5342,3.5943,3.6526,3.7084,3.7611,3.8102,3.8552,3.8956,3.9309,3.9607,3.9846];
+const nssP50  = [2.7425,2.8985,3.0144,3.1004,3.1649,3.2143,3.2538,3.2873,3.3179,3.3477,3.3783,3.4107,3.4455,3.4828,3.5228,3.5651,3.6094,3.6552,3.7018,3.7488,3.7954,3.841,3.8849,3.9266,3.9653,4.0005,4.0318,4.0585,4.0802,4.0966];
+const nssM50  = [1.7542,1.981,2.1544,2.291,2.4026,2.4975,2.5815,2.6587,2.7316,2.8021,2.871,2.939,3.0062,3.0728,3.1385,3.2034,3.2671,3.3296,3.3906,3.45,3.5076,3.5634,3.6173,3.6693,3.7193,3.7674,3.8134,3.8576,3.8998,3.9403];
+// Points observés (pour overlay scatter)
+const nssObsX = [0.25,0.5,1,2,3,5,7,10,15,20,30];
+const nssObsY = [2.2575,2.3021,2.3922,2.5437,2.6603,2.8612,2.956,3.1003,3.3786,3.6418,4.0345];
+
+if(document.getElementById('bdtNssChart')) {
+  new Chart(document.getElementById('bdtNssChart'), {
+    type: 'line',
+    data: {
+      labels: nssLabels,
+      datasets: [
+        { label:'NSS +50 bps', data:nssP50, borderColor:'#00e396', borderWidth:2.5, pointRadius:0, fill:false, tension:0.4 },
+        { label:'NSS +25 bps', data:nssP25, borderColor:'#00cdd9', borderWidth:2, borderDash:[4,3], pointRadius:0, fill:false, tension:0.4 },
+        { label:'NSS Base 05/03', data:nssBase, borderColor:'rgba(160,174,192,0.9)', borderWidth:2.5, pointRadius:0, fill:false, tension:0.4 },
+        { label:'NSS -25 bps', data:nssM25, borderColor:'#f0a500', borderWidth:2, borderDash:[4,3], pointRadius:0, fill:false, tension:0.4 },
+        { label:'NSS -50 bps', data:nssM50, borderColor:'#ff4560', borderWidth:2.5, pointRadius:0, fill:false, tension:0.4 },
+        { label:'Points observés BAM', data: nssLabels.map(l=>{ const i=nssObsX.indexOf(parseFloat(l)); return i>=0?nssObsY[i]:null; }), type:'scatter', borderColor:'rgba(255,255,255,0.8)', backgroundColor:'rgba(255,255,255,0.8)', pointRadius:5, pointStyle:'circle', showLine:false }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins: {
+        legend:{ position:'top', labels:{ boxWidth:12, color:'#a0aec0', padding:12 } },
+        tooltip:{ callbacks:{ label: c => `${c.dataset.label}: ${Number(c.raw).toFixed(3)}%` } }
+      },
+      scales: {
+        x:{ grid:{ color:'rgba(255,255,255,0.04)' }, ticks:{ color:'#6b7280', font:{size:9}, maxTicksLimit:10 } },
+        y:{ grid:{ color:'rgba(255,255,255,0.04)' }, min:1.4, max:4.5, ticks:{ color:'#6b7280', callback: v=>v.toFixed(2)+'%' } }
+      }
+    }
+  });
+}
+
+// ═══════ SPARKLINES ═══════
+function drawSparkline(id, data, color) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: data.map((_, i) => i),
+      datasets: [{ data, borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.4 }]
+    },
+    options: {
+      responsive: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } },
+      animation: false
+    }
+  });
+}
+
+drawSparkline("spark1", [70,72,76,79,82,82.5,83,86], goldColor);
+drawSparkline('spark2', [44,47,53,57,61,64,65,70], cyanColor);
+drawSparkline("spark3", [4820,4910,4980,5050,5120,5180,5250,5350], "#ffc94d");
+drawSparkline('spark4', [9.82,9.86,9.90,9.94,9.98,10.02,10.08,10.15], redColor);
+
+// ═══════ SCROLL ANIMATIONS ═══════
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+</script>
+
+<!-- ══ GLOBAL TOOLTIP ══ -->
+<div id="chartTooltip">
+  <div class="tt-title" id="tt-title">—</div>
+  <div id="tt-body"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// CROSSHAIR CURSOR — Plugin Chart.js universel
+// S'applique à tous les charts du rapport
+// ════════════════════════════════════════════════════════════════
+
+const tooltip     = document.getElementById('chartTooltip');
+const ttTitle     = document.getElementById('tt-title');
+const ttBody      = document.getElementById('tt-body');
+
+// Plugin crosshair enregistré globalement
+const crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw(chart) {
+    if (chart._crosshairX == null) return;
+    const ctx = chart.ctx;
+    const x = chart._crosshairX;
+    const { top, bottom } = chart.chartArea;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.strokeStyle = 'rgba(0,205,217,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([4, 3]);
+    ctx.shadowColor = 'rgba(0,205,217,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+Chart.register(crosshairPlugin);
+
+// Formater valeur selon le type de chart
+function formatVal(val, chartId) {
+  if (val == null || val === '') return '—';
+  const v = Number(val);
+  if (isNaN(v)) return '—';
+  // Fan chart MASI — pts
+  if (['masiFanChart','masiForecastChart'].includes(chartId))
+    return v.toLocaleString('fr-FR', {maximumFractionDigits:0}) + ' pts';
+  // Courbes taux — %
+  if (['courbeChart','bdtCibleChart','bdtNssChart'].includes(chartId))
+    return v.toFixed(4) + '%';
+  // Delta bps
+  if (chartId === 'spreadChart')
+    return (v > 0 ? '+' : '') + v.toFixed(2) + ' bps';
+  // MASI historique
+  if (chartId === 'masiChart')
+    return v.toLocaleString('fr-FR', {maximumFractionDigits:0}) + ' pts';
+  // Brent/WTI/Or
+  if (['brentChart','orChart','goldChart'].includes(chartId))
+    return '$' + v.toFixed(2);
+  // Autres cours
+  if (Math.abs(v) > 1000)
+    return v.toLocaleString('fr-FR', {maximumFractionDigits:0});
+  if (Math.abs(v) < 10)
+    return v.toFixed(4);
+  return v.toLocaleString('fr-FR', {maximumFractionDigits:2});
+}
+
+// Couleur du delta
+function deltaColor(v) {
+  if (v > 0) return '#00e396';
+  if (v < 0) return '#ff4560';
+  return '#94a3b8';
+}
+
+// Attacher le crosshair à un canvas
+function attachCrosshair(canvas) {
+  if (!canvas || canvas._crosshairAttached) return;
+  canvas._crosshairAttached = true;
+  const chartId = canvas.id;
+
+  canvas.addEventListener('mousemove', (e) => {
+    const chart = Chart.getChart(canvas);
+    if (!chart) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const ca = chart.chartArea;
+
+    // Hors zone de traçage → cacher
+    if (mouseX < ca.left || mouseX > ca.right || mouseY < ca.top || mouseY > ca.bottom) {
+      chart._crosshairX = null;
+      chart.update('none');
+      tooltip.classList.remove('visible');
+      return;
+    }
+
+    // Trouver le point le plus proche
+    const points = chart.getElementsAtEventForMode(e, 'index', { intersect: false }, true);
+    if (!points.length) return;
+
+    const idx = points[0].index;
+    chart._crosshairX = chart.getDatasetMeta(0).data[idx]?.x ?? mouseX;
+    chart.update('none');
+
+    // ── Construire le tooltip ──────────────────────────────────────
+    const label = chart.data.labels?.[idx] ?? '';
+    ttTitle.textContent = String(label);
+
+    let rows = '';
+    let prevVal = null;
+    chart.data.datasets.forEach((ds, di) => {
+      if (ds.label?.includes('band') || !ds.label) return;
+      const val = ds.data[idx];
+      if (val == null) return;
+      const color = Array.isArray(ds.borderColor) ? ds.borderColor[idx] : (ds.borderColor || '#94a3b8');
+      const formatted = formatVal(val, chartId);
+
+      // Calculer delta vs point précédent pour les charts temporels
+      let deltaStr = '';
+      if (prevVal === null && di === 0 && idx > 0) {
+        const prev = ds.data[idx - 1];
+        if (prev != null && !isNaN(prev)) {
+          const d = Number(val) - Number(prev);
+          const pct = (d / Number(prev) * 100).toFixed(2);
+          const sign = d >= 0 ? '+' : '';
+          deltaStr = ` <span style="color:${deltaColor(d)};font-size:10px;">${sign}${pct}%</span>`;
+        }
+      }
+
+      rows += `<div class="tt-row">
+        <span class="tt-dot" style="background:${color};box-shadow:0 0 4px ${color}40;"></span>
+        <span class="tt-label">${ds.label.length > 22 ? ds.label.slice(0,22)+'…' : ds.label}</span>
+        <span class="tt-val">${formatted}${deltaStr}</span>
+      </div>`;
+      prevVal = val;
+    });
+    ttBody.innerHTML = rows;
+
+    // ── Positionner le tooltip ──────────────────────────────────────
+    const tx = e.clientX + 16;
+    const ty = e.clientY - 20;
+    const tw = 230;
+    const left = tx + tw > window.innerWidth ? e.clientX - tw - 16 : tx;
+    const top  = Math.min(ty, window.innerHeight - 200);
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = top + 'px';
+    tooltip.classList.add('visible');
+  });
+
+  canvas.addEventListener('mouseleave', () => {
+    const chart = Chart.getChart(canvas);
+    if (chart) { chart._crosshairX = null; chart.update('none'); }
+    tooltip.classList.remove('visible');
+  });
+}
+
+// Observer pour attacher le crosshair à tous les canvas présents et futurs
+function attachAll() {
+  document.querySelectorAll('canvas').forEach(c => {
+    if (c.id && !c.id.startsWith('spark')) {
+      attachCrosshair(c);
+    }
+  });
+}
+// Au chargement initial + après un délai (charts rendus en async)
+attachAll();
+setTimeout(attachAll, 800);
+setTimeout(attachAll, 2000);
+</script>
+</body>
+</html>
